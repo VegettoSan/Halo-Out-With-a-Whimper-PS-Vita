@@ -36,3 +36,7 @@ VERIFIED = inspected or measured; INFERRED = reasoned; UNTESTED = proposed. Upda
 - **C remains UNTESTED/deferred:** no tractable static-recompilation proof or measured reason to prefer it.
 
 See [ADR-001](DECISIONS.md) for comparison, effort uncertainty, licensing observations and the next decision gate. No playable PC compatibility or functional Vita VPK is established.
+
+## PC menu update — 2026-11-23 UTC
+
+**VERIFIED E014:** route B now reaches the original interactive PC main menu and Firefight map/difficulty selection after a faithful runtime-only Windows `show_message_ext` implementation. No GML or recovered resources changed. The next test is an original PC arena; combat parity, audio, ARM portability and Vita performance remain UNTESTED. This supersedes only the current-menu blocker above, retaining E007's failed baseline. See [ADR-002](DECISIONS.md) and [reproduction details](OPENGMK_PC_PROBE.md). No VPK was generated.

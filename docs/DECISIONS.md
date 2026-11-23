@@ -33,3 +33,13 @@
 **Licenses:** local WinVita LICENSE is MIT with separately listed third-party notices; D2Vita is GPL-3.0; inspected OpenGMK runner Cargo metadata says GPL-2.0-only; Gmk-Splitter LICENSE says GPL-3.0-or-later. These are component observations, not distribution clearance. Keep reference code, original game data and recovered GML private; review the actual versions before incorporating/distributing anything. No proprietary resources from other ports were used.
 
 **Revisit:** after an unmodified-data PC run demonstrates a real menu and one interaction, or a newly observed runtime limitation changes B's cost. Do not build a Vita VPK just to demonstrate a loader or placeholder screen.
+
+## ADR-002 — 2026-11-23 UTC: route B has a real PC menu proof
+
+**Status:** Accepted research result; final Vita architecture remains undecided.
+
+**VERIFIED:** E011–E014 implemented the missing modal builtin in an OpenGMK working copy, tested all three button values and Escape, and ran the original EXE unchanged. The real main menu, Firefight map selection and difficulty selection responded to keyboard/mouse input. Normal window closure returned exit 0. E007's original failure and the unsuccessful first build remain in the log.
+
+**Decision:** retain route B as the next research priority. A native Windows dialog and a successful PC renderer do not establish a Vita backend. Keep WinVita available without expanding this session into D3D8 development. No GML rewriting, binary game patching or asset substitution was needed for this milestone.
+
+**Next discriminating test:** one original Firefight arena on PC, verifying movement, one weapon action, enemy spawning and audio, with bounded runtime-only fixes for any observed blocker. Physical Vita, performance, suspend/resume and persistent-save claims remain unsupported. No VPK packaging is justified by this menu-only result.

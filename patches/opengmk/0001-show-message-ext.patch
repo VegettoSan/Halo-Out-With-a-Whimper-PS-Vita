@@ -1,0 +1,49 @@
+diff --git a/gm8emulator/src/game/platform.rs b/gm8emulator/src/game/platform.rs
+index 29cabeb..e7cc64d 100644
+--- a/gm8emulator/src/game/platform.rs
++++ b/gm8emulator/src/game/platform.rs
+@@ -1,4 +1,7 @@
+ mod windows;
+ 
++#[cfg(windows)]
++pub mod message_dialog;
++
+ #[cfg(windows)]
+ pub use windows::{disk_free, disk_size, display_colour_depth, display_frequency, display_height, display_width};
+diff --git a/gm8emulator/src/gml/kernel.rs b/gm8emulator/src/gml/kernel.rs
+index 86babd5..98cb210 100644
+--- a/gm8emulator/src/gml/kernel.rs
++++ b/gm8emulator/src/gml/kernel.rs
+@@ -6942,9 +6942,29 @@ impl Game {
+         unimplemented!("Called unimplemented kernel function draw_highscore")
+     }
+ 
+-    pub fn show_message_ext(&mut self, _args: &[Value]) -> gml::Result<Value> {
+-        // Expected arg count: 4
+-        unimplemented!("Called unimplemented kernel function show_message_ext")
++    pub fn show_message_ext(&mut self, args: &[Value]) -> gml::Result<Value> {
++        let (message, button1, button2, button3) = expect_args!(args, [bytes, bytes, bytes, bytes])?;
++        #[cfg(windows)]
++        {
++            let message = self.decode_str(message.as_ref()).into_owned();
++            let labels = [button1, button2, button3].map(|s| self.decode_str(s.as_ref()).into_owned());
++            let result = platform::message_dialog::show(
++                self.window.hwnd() as isize,
++                &message,
++                [&labels[0], &labels[1], &labels[2]],
++            );
++            // Drain owner-window events dispatched by the modal loop, then consume
++            // dialog activation/dismissal input rather than leaking it into GML.
++            self.process_window_events();
++            self.input.keyboard_clear_all();
++            self.input.mouse_clear_all();
++            result.map(Value::from).map_err(|e| gml::Error::FunctionError("show_message_ext".into(), e.to_string()))
++        }
++        #[cfg(not(windows))]
++        {
++            let _ = (message, button1, button2, button3);
++            Err(gml::Error::FunctionError("show_message_ext".into(), "modal backend not implemented on this platform".into()))
++        }
+     }
+ 
+     pub fn message_background(&mut self, _args: &[Value]) -> gml::Result<Value> {

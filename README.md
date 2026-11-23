@@ -1,6 +1,6 @@
 # Halo: Out With a Whimper — PS Vita (research port)
 
-> **P1: compatibility research.** Project recovery is verified; OpenGMK fails during startup and WinVita has passed a host-only loader test. No playable port, functional Vita VPK or final architecture is verified.
+> **P1: compatibility research.** Project recovery and a real interactive PC menu in modified OpenGMK are verified. WinVita has passed a host-only loader test. No playable Vita port, functional VPK or final architecture is verified.
 
 This repository documents research toward a native PlayStation Vita adaptation of the Windows *Halo: Out With a Whimper — Firefight Demo*. **Primary goal: reuse the original executable/data/game logic wherever technically possible, not recreate the game from scratch.**
 
@@ -11,7 +11,7 @@ An owner-supplied `HOWaW_FirefightDemov1.zip` was inspected *statically* (not ex
 - Contains `HOWaW_FirefightDemov1.exe` (18,142,424 bytes, PE32 Intel x86; SHA-256 `cf0661731e049371f30d2e953dcbad7236eb83c93f0b615fa819dbe913d8773f`) and `Music/menu.mp3`.
 - Nine PE sections; ~16.13 MB of trailing data (overlay). Contains classic GameMaker-related strings and `D3DX8.dll` marker.
 - **GameMaker 8.0 format is verified** by loading signatures, version header and strict recovery; exact vendor patch/build remains unknown. No original editor project is included in the ZIP.
-- Recovered existing entries: 693 sprites, 128 sounds, 181 scripts, 233 objects, 845 object events and 15 rooms. OpenGMK 0.2.0 stops at unsupported `show_message_ext` before a menu; recovery is not gameplay compatibility.
+- Recovered existing entries: 693 sprites, 128 sounds, 181 scripts, 233 objects, 845 object events and 15 rooms. The original OpenGMK trial failed at `show_message_ext`; a bounded Windows runtime implementation now reaches the real main menu, Firefight map selector and difficulty selector with unchanged game data. Combat and Vita compatibility remain untested.
 
 See [technical audit](docs/TECHNICAL_AUDIT.md) for evidence and uncertainty.
 

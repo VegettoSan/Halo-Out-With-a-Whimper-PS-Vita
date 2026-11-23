@@ -148,10 +148,60 @@ build/session-20261122/probe_winvita_loader recovered/session-20261122/HOWaW_Fir
 - **Evidence:** D/embedded-D3DX8.bin, D/D3DX8-inflated.dll, R/d3dx8-inflated-pe.json, R/cleanmem-pe.json; no DLL committed.
 - **Next:** route B's faithful missing-dialog experiment, with future native adaptation of the two CleanMem exports recorded as an ARM blocker.
 
-## Template (copy for E011+)
+## PC menu session — 2026-11-23 UTC (owner date 2026-11-22)
+
+Private evidence root **M = `reports/local/menu-probe-20261122/`**. Original input hash keys H_ZIP/H_EXE/H_MUSIC/H_GMK above are unchanged. Existing E007 remains a failed baseline; these entries do not replace it. Source/build reproduction: [OPENGMK_PC_PROBE.md](OPENGMK_PC_PROBE.md). Exact local host setup and launch commands are retained in M/commands.txt; paths in public documents remain sanitized.
+
+### E011 — Missing-source/toolchain prerequisite and bounded working copy
+
+- **UTC:** 2026-11-23. **Inputs:** official OpenGMK commit `9e4282e6d19f4dd00961811840ddc3e11da6dd5a`; local rustup-init SHA-256 `38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db`, version `1.29.3 (edbc831ce 2026-11-02)`.
+- **Environment:** Windows NT 10.0.26200 / PowerShell 7.6.9. MSVC tools 14.50.35717 and Windows SDK/CMake/Ninja located in the existing Visual Studio Build Tools tree. Rust/Cargo and OpenGMK source absent in the checked local locations.
+- **Exact core commands:** `git ls-remote https://github.com/OpenGMK/OpenGMK.git HEAD refs/tags/v0.2.0`; `git clone --depth 1 https://github.com/OpenGMK/OpenGMK.git local-tools/menu-probe-20261122/OpenGMK`; `git clone --local --no-hardlinks local-tools/menu-probe-20261122/OpenGMK local-tools/menu-probe-20261122/OpenGMK-work`. The existing rustup-init ran with `-y --no-modify-path --profile minimal --default-toolchain stable --target i686-pc-windows-msvc`, with RUSTUP_HOME/CARGO_HOME pointing inside ignored local-tools. `cargo +stable fetch --locked --target i686-pc-windows-msvc --manifest-path local-tools/menu-probe-20261122/OpenGMK-work/Cargo.toml` fetched missing dependencies.
+- **PASS rule:** reuse existing compiler/SDK, obtain only absent prerequisites, retain pristine source and change a separate working copy.
+- **Observed VERIFIED:** Rust `1.100.0 (0ef1bc386 2026-11-09)` / Cargo `1.100.0 (3acc79c0c 2026-11-05)` installed in the checkout, with no persistent PATH edit. MSVC was reused; no VS installation. Upstream still contains an unimplemented `show_message_ext`. Upstream's 1.77 toolchain pin is overridden by the recorded stable toolchain; no claim about Windows 7 support. Cargo.lock remains SHA-256 `8a10301053ade07fb5991594b4108024da5c21fb16843c61e59708a31e3428b1` in both clones. Pristine clone status stays clean.
+- **Result: PASS.** The source commit differs from the old packaged 0.2.0 binary; no direct performance comparison or other upstream-change attribution is made.
+- **Evidence:** M/source-clone.txt, work-copy.txt, rust-install.txt, cargo-fetch.txt; private source clones and recipe.
+- **Next:** implement and independently exercise the real modal UI (E012).
+
+### E012 — Real three-button modal probe before game execution
+
+- **UTC:** 2026-11-23. **Input:** own Windows backend `tools/opengmk/message_dialog.rs`, SHA-256 `b898c2f5efabb2c0fb742cc64ea138cf26acd96ea74d5c21a34ee8fdb0cd96c0`; controlled fixture `dialog_probe.rs`, SHA-256 `43c42cfb6901ef3ad66220f8c495e7ddf2ffc7bde8af51266cfc915ed2be12d3`. No game assets or GML used.
+- **Tools/environment:** Rust 1.100.0, MSVC x86 target. Exact build wrapper: `cmd /d /c local-tools\menu-probe-20261122\build.cmd probe`; core compiler command `rustc --edition 2021 --target i686-pc-windows-msvc tools/opengmk/dialog_probe.rs -o build/menu-probe-20261122/dialog_probe.exe` under RUSTUP_TOOLCHAIN=stable. Windows GUI actions used the computer-use skill.
+- **PASS rule:** actual controls produce 1/2/3; Escape produces 0; call does not return before dismissal. No fixed-result test mode or synthetic GML bypass.
+- **Observed:** initial launch with `Start-Process -WindowStyle Hidden` gave a pending call but no usable visible fixture; the fixture process alone was stopped and relaunched for interactive UI observation. Alpha click returned 1; Beta click returned 2; Tab/Tab/Enter selected Gamma and returned 3; Escape returned 0. Logged pending durations: 17,977 / 24,122 / 40,908 / 12,971 ms. `DIALOG_PROBE_PASS`, empty stderr. These durations are user/agent wait times, not performance measurements. Same backend bytes were copied into the runtime and compared for equality.
+- **Implementation VERIFIED:** modal DialogBoxIndirectParamW with private button IDs (101–103), distinct cancellation path, OS message pumping and blocking caller. Runtime integration drains owner events and clears keyboard/mouse state after return. This supports the required pause/input behavior; edge cases with held buttons and exact original visual styling remain UNTESTED.
+- **Result: initial GUI visibility BLOCKED, then PASS for the controlled four-case probe.**
+- **Evidence:** M/dialog-probe-build.txt, dialog-probe-stdout.txt (initial pending launch), dialog-interactive-stdout.txt, dialog-interactive-stderr.txt; fixture binary hash `3b4132ccd0512884c27ba8ea211fe4d5ec4a859e80af86e06abe6b2de9a92d2c`.
+- **Next:** compile the runtime with this backend and unchanged game data (E013/E014).
+
+### E013 — Runtime compilation: retained MSBuild failure, Ninja success
+
+- **UTC:** 2026-11-23. **Inputs:** E011 source/lockfile; E012 backend; `patches/opengmk/0001-show-message-ext.patch` SHA-256 `33b5d137650f44cde585f8c11020eba7836161bef526cbee3ccdefb37d157bf6`. Integration changes only platform-module wiring and the builtin handler; no game data changed.
+- **Tools:** Rust/Cargo 1.100.0, MSVC tools 14.50.35717, existing VS CMake/Ninja, target i686-pc-windows-msvc.
+- **Exact core command:** `cargo build --locked --release --target i686-pc-windows-msvc -p gm8emulator --manifest-path local-tools/menu-probe-20261122/OpenGMK-work/Cargo.toml`. Actual wrapper `cmd /d /c local-tools\menu-probe-20261122\build.cmd runtime` loads existing VsDevCmd x86/host x64 and private Rust/Cargo homes. Environment variants and paths are in M/commands.txt.
+- **PASS rule:** produce real modified runtime, retaining lockfile and game hashes; do not count successful dependencies as a complete build.
+- **First outcome FAIL:** libsoundio-sys CMake compiler check invoked VS/MSBuild and failed with FTK1011 tracking-log creation errors inside deeply nested paths. **INFERRED:** Windows tracking/path-length behavior; not a demonstrated missing SDK or game-code failure.
+- **One motivated correction:** selected existing `CMAKE_GENERATOR=Ninja` and new shorter `CARGO_TARGET_DIR=build/mp`, preserving the failed build tree. No dependency reinstall or cleanup. Second build exit 0, optimized profile completed in 1m49s, with 48 compiler warnings (including upstream deprecations/extern declarations), not zero-warning claims.
+- **Result: first build FAIL, corrected build PASS.** Output 5,335,552-byte runtime SHA-256 `02de3629b99b4382030fb2484b8e950be617c5b524643f0ecc976e84a87407a2`. `git apply --check` against pristine source passed; Cargo.lock unchanged.
+- **Evidence:** M/runtime-build-1.txt and runtime-build-2.txt, ignored build trees, shareable backend/patch and reproduction recipe.
+- **Next:** execute the original EXE copy after controlled probe PASS (E014).
+
+### E014 — Original main menu and genuine interaction on PC
+
+- **UTC:** start/end recorded in M/game-1-process.json and game-1-exit.json; ended `2026-11-23T04:39:10.014722+00:00`.
+- **Inputs:** H_EXE + H_MUSIC copied into fresh `recovered/menu-probe-20261122/run-1/`; H_CLEAN exported by the original game data. Modified runtime hash from E013. ZIP and recovered H_GMK were read/hash-checked only; no re-decompilation or data edits.
+- **Environment/tools:** Windows NT 10.0.26200, AMD OpenGL 3.3.0 Core Profile / driver 26.11.2.261112, i686 MSVC runtime built in E013. Original Windows runner was not launched.
+- **Exact launcher:** `python reports/local/menu-probe-20261122/launch_runtime.py`. Child command `gm8emulator.exe HOWaW_FirefightDemov1.exe -s`, cwd `recovered/menu-probe-20261122/run-1/`, private TEMP/TMP `recovered/menu-probe-20261122/temp-1/`, RUST_BACKTRACE=1. CREATE_NO_WINDOW suppresses the console only; native game/dialog windows are interactive.
+- **PASS rule:** unchanged original data displays the real main menu and responds to one genuine interaction; identify the first runtime error if any.
+- **Observed VERIFIED:** native original-text Low/Medium/High priority dialog appears. Its actual game selection was not instrumented; E012 separately verifies each result. After dismissal: original logo/title prompt, Enter → welcome, Enter → player configuration, click Save Changes → actual **Firefight / Forge / Armory / Exit** menu. Click Firefight → three original scenario previews; select first scenario → Easy/Normal/Heroic/Legendary difficulty selector. Keyboard/mouse input and animated rendering worked on this route. Alt+F4 then closed the process with captured **exit code 0**; no further runtime error/panic observed.
+- **Result: PASS for PC menu and genuine interaction.** No combat was started; weapons, enemies, collisions, audio output, save persistence after restart and Vita execution remain UNTESTED. No additional runtime correction was justified by this menu-only run.
+- **Evidence:** M/game-1-stdout.txt, game-1-stderr.txt, game-1-process.json, game-1-exit.json; private main-menu.png, firefight-selector.png, difficulty-selector.png. Hash audit M/input-audit.json confirms original ZIP/EXE/music, recovered GMK and copied EXE unchanged. The runtime implementation and controlled test source contain no game GML.
+- **Next discriminating test:** one bounded original Firefight arena on PC, recording movement, a weapon action, enemy spawning, audio and first failure. **No functional Vita VPK exists; none was generated.**
+
+## Template (copy for E015+)
 
 ```markdown
-### E011 — <one hypothesis>
+### E015 — <one hypothesis>
 - Date (UTC):
 - Input hashes:
 - Environment/tool version:

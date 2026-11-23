@@ -1,6 +1,6 @@
 # Technical audit — session 2026-11-22 local / 2026-11-23 UTC
 
-**Scope:** VERIFIED archive/PE inspection, project recovery, independent project inventory, one failed OpenGMK PC launch and a host-only WinVita loader probe. No original Windows runner execution, ARM game execution, Vita build or device test. Detailed attempts: [EXPERIMENTS.md](EXPERIMENTS.md), E001–E010.
+**Scope:** VERIFIED archive/PE inspection, project recovery, independent project inventory, the initial failed OpenGMK launch, a successful modified-runtime PC menu trial and a host-only WinVita loader probe. No original Windows runner execution, ARM game execution, Vita build or device test. Detailed attempts: [EXPERIMENTS.md](EXPERIMENTS.md), E001–E014.
 
 | Input | Size (bytes) | SHA-256 | Assessment |
 | --- | ---: | --- | --- |
@@ -76,7 +76,7 @@ Sprite pixel arrays alone total 27,451,468 RGBA bytes: a decoded-data count, **n
 
 The included **`CleanMem.dll`** is 1,024 bytes, PE32 x86, SHA-256 `dac23ed1af08cb7409a18dc09b0c35230e1b314ff49711394c66bd69ae86548c`. Its imports are `GetCurrentProcessId`, `OpenProcess`, `CloseHandle`, `EmptyWorkingSet`, `GetProcessMemoryInfo`. Recovered startup logic calls its two exports before the priority dialog. **INFERRED:** a small native OS adapter is needed on Vita; an x86 DLL cannot be loaded natively by an ARM OpenGMK port. Its result values were not instrumented in the PC trial.
 
-## OpenGMK PC trial — FAIL before menu
+## Initial OpenGMK PC trial — E007 FAIL before menu (retained)
 
 Local GM8Emulator 0.2.0 read the unmodified copied EXE in strict mode and created an AMD OpenGL 3.3 context. It then panicked at `gm8emulator\\src\\gml\\kernel.rs:6609:9`: **`Called unimplemented kernel function show_message_ext`**. Recovered startup logic uses this builtin for a three-choice process-priority dialog. No game source was patched to bypass it.
 
@@ -85,6 +85,16 @@ Local GM8Emulator 0.2.0 read the unmodified copied EXE in strict mode and create
 - **UNTESTED:** visible menu, sprite animation, collisions, player controls, enemies, weapons, audio, arena progression, saving and timing. No game window remained when UI enumeration ran. Numeric process exit code was not captured.
 
 The inspected upstream [kernel source](https://github.com/OpenGMK/OpenGMK/blob/master/gm8emulator/src/gml/kernel.rs) also leaves `show_message_ext` unimplemented; merely repeating the same launch or assuming a newer binary fixes it is unjustified.
+
+## Modified OpenGMK PC trial — E014 PASS for real menu and interaction
+
+**VERIFIED:** official source commit `9e4282e6d19f4dd00961811840ddc3e11da6dd5a`, built in a separate private working copy, with a bounded Windows `show_message_ext` implementation. Original EXE, music and recovered GMK hashes remain unchanged. No GML call was removed or replaced. Cargo.lock is unchanged; this source build is distinct from E007's older packaged runtime.
+
+The native modal backend respects three custom buttons, return values 1/2/3, Escape/close=0, synchronous pause and input cleanup after dismissal. A standalone real-window probe tested mouse selections 1 and 2, Tab/Enter selection 3 and Escape 0 before launching the game. The game and fixture used the same backend bytes. Native visual styling and held-input edge cases are not claimed identical to the original runner.
+
+**Observed working:** original startup priority dialog, logo/title sequence, welcome, first-run player configuration, Save Changes, real main menu, Firefight map selection and difficulty selection. Real keyboard and mouse input drove these transitions. Alt+F4 ended with exit code 0; no further runtime error was observed along this route. Audio was not verified by listening, and configuration persistence after restart was not tested.
+
+Rust/Cargo were installed locally because absent; existing MSVC/Windows SDK/CMake/Ninja were reused. One build failed on MSBuild tracking-file paths; a new shorter build path with existing Ninja succeeded. Exact source/build/binary identities, controlled-test output and private screenshots are recorded in [OPENGMK_PC_PROBE.md](OPENGMK_PC_PROBE.md) and E011–E014. **This is a Windows PC menu proof, not an ARM/Vita or combat proof.**
 
 ## D2Vita / newly supplied WinVita — partial evidence for route A
 
@@ -105,7 +115,7 @@ Name-only comparison: D2Vita's documented combined engine/game table matches **2
 
 ## Remaining gates
 
-Exact vendor patch/build, playable PC compatibility, native ARM runtime/backend portability, renderer fidelity, memory/frame pacing, input/scaling, audio, suspend/resume and save paths remain UNTESTED. **No functional VPK exists.** No title ID was selected or package generated.
+Exact vendor patch/build, PC combat/parity, native ARM runtime/backend portability, renderer fidelity, memory/frame pacing, Vita input/scaling, audio output, suspend/resume and save persistence remain UNTESTED. PC main-menu interaction is now VERIFIED. **No functional VPK exists.** No title ID was selected or package generated.
 
 ## Repeatable local baseline
 
