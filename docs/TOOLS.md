@@ -26,3 +26,40 @@
 - `build/`: VPK/ELF outputs.
 
 Never commit tool downloads, proprietary sources or recovered game data.
+
+## Local inventory — VERIFIED 2026-11-23 UTC
+
+All tools below already existed or were supplied locally during the session. **No tools were downloaded or installed.** External trees were read only; selected executables/JAR/loader sources were copied into ignored `local-tools/session-20261122/`. Absolute host paths are confined to private evidence.
+
+| Tool | Observed identity | Use / limits |
+| --- | --- | --- |
+| Python | 3.14.4 | Standard-library archive, PE, hash and inventory scripts |
+| GM8Decompiler, standalone | 2.2.0, i686 MSVC, built 2024-02-12, `#fb6d4d57` | Used successfully; SHA-256 below |
+| GM8Decompiler, bundled | File version 2.1.1 | Present in OpenGMK bundle; not retried after 2.2.0 succeeded |
+| OpenGMK / GM8Emulator | Bundle v0.2.0, file version 0.2.0, i686 Windows MSVC | One strict PC trial; fails at `show_message_ext` |
+| Gmk-Splitter | Folder v0.21; JAR 1,560,428 bytes | Reader works; standard export rejects duplicate resource name |
+| Java / javac | Temurin 25.0.4.1 | Process-local preferences used to avoid host registry writes |
+| Ghidra | 12.1.4 PUBLIC; application revision `8b6bbb857accdfa20dc5b2f5dea471178c2e9fbc` | Inventoried from application.properties; not launched or needed for these probes |
+| VitaSDK, Windows | GCC 10.3.0; SDK built 2026-03-29 14:00:17 | `--version` works; toolchain commit `71f3789342f610a4eb3ba50fc33292c4900c6666`; no Vita build |
+| VitaSDK, Ubuntu WSL | version_info built 2026-03-29 13:52:56; same toolchain commit | Present; cross-compilation not tested |
+| D2Vita | VERSION 0.2.3 archive | Architecture/shim source reference; winx86 submodule empty |
+| WinVita, supplied later | CMake version 0.1.0; MIT LICENSE; no git revision available | Includes Box86-derived sources and actual shims; host PE loader tested on copy |
+| WSL host compiler | g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0 | Built only host metadata probe; QEMU ARM not found by `command -v` |
+
+Cargo/rustc were not on the Windows PATH or in the checked user cargo bin directory. No OpenGMK source tree was located in the supplied tool directory. No SDL2 or vitaGL library matched the inspected Windows VitaSDK target-library paths; this does not prove absence elsewhere. No installation or broad system search was performed.
+
+Binary/JAR identities (SHA-256):
+
+| Artifact | SHA-256 |
+| --- | --- |
+| GM8Decompiler 2.2.0 | `ab39dc7a9013ecec9084de86fa220e25bb2f583edcd526370963bac78572d0f0` |
+| Bundled GM8Decompiler 2.1.1 | `f863ca48fc67ebdf6383fe16769fa043fc778ac739a593ddabde9fa5e32f7977` |
+| GM8Emulator 0.2.0 | `85d271874b4b7d10f813d59f951a10977754aa415d95e747d45348b06b9083c9` |
+| gmksplit.jar | `319b9b0bf7a724059a18dfbe167b4057ec9d32d8269bf5ff4e0b2a6aed5ad3ed` |
+| WinVita pe_image.cpp | `3675715e9e1dd109aa9580e799ee03d29df84c08cbb4f5fd11a174fa275fa371` |
+| WinVita win32_shims_misc.cpp | `4250f2c5ccf4fccf757e7f7703bf0e65287f5215bca08b61add67df9dd420709` |
+| D2Vita docs-site/shims.md | `c042ba1cf821dca68f99972939647309edb7f032f80dc5cd9e92992c4ea697fa` |
+
+**Trust assessment:** Windows EXEs were unsigned. File versions, hashes, packaged readme and official project/release documentation were inspected; reproducible-build/provenance equivalence was not verified. The decompiler consumes data; it does not run the game. The one OpenGMK game trial was a host process, **not a security VM**. GML external/OS-call candidates and the tiny included DLL's imports were inspected first; paths and temporary outputs were redirected to fresh private copies. No original game EXE was launched as a Windows process.
+
+Shareable probes added in this session: `tools/inspect_pe.py`, `tools/GmkAudit.java`, `tools/MemoryPrefsFactory.java`, `tools/probe_winvita_loader.cpp`. Their outputs may contain private resource names/GML: keep output under ignored paths. The Java reader uses the separately supplied JAR; the C++ probe uses separately supplied WinVita loader source. Neither third-party dependency is committed.

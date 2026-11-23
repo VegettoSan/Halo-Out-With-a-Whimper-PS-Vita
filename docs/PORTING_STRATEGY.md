@@ -27,3 +27,12 @@ Rank using: actual recovered/executed game logic; amount of original code/assets
 
 ## Evidence labels
 VERIFIED = inspected or measured; INFERRED = reasoned; UNTESTED = proposed. Update decisions in docs/DECISIONS.md and tests in docs/EXPERIMENTS.md.
+
+## Evidence update — 2026-11-23 UTC
+
+- **VERIFIED B:** GameMaker 8.0 format, strict project recovery and independent inventory succeeded. Local OpenGMK 0.2.0 executes startup GML but fails on `show_message_ext` before a menu. Standard Gmk-Splitter export also fails on a duplicate sprite name; no IDs or names were changed.
+- **VERIFIED A:** the subsequently supplied WinVita loader maps the real EXE on a PC host; guest execution remains UNTESTED. The supplied source lacks D3D8 handling and returns an error for DirectDraw creation. D2Vita's Glide presentation cannot be assumed to handle this runner. Its optional kernel-plugin arrangement is a reference claim, not a requirement adopted for this port.
+- **INFERRED priority:** B offers the smallest next experiment while preserving original GML/assets. Implement the missing dialog in a runtime copy and retest the unchanged EXE; keep A available. Native Vita rendering/input/audio, memory, frame pacing, suspend/resume and saves are not designed or measured yet.
+- **C remains UNTESTED/deferred:** no tractable static-recompilation proof or measured reason to prefer it.
+
+See [ADR-001](DECISIONS.md) for comparison, effort uncertainty, licensing observations and the next decision gate. No playable PC compatibility or functional Vita VPK is established.
