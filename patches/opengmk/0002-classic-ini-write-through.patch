@@ -1,0 +1,34 @@
+--- a/gm8emulator/src/gml/kernel.rs
++++ b/gm8emulator/src/gml/kernel.rs
+@@ -6635,11 +6635,23 @@
+         }
+     }
+ 
++    // Classic Windows runner profile writes are visible to file_exists and a
++    // subsequent ini_open without requiring an explicit close. Keep the active
++    // handle/data available; do not manufacture files in file_exists itself.
++    fn persist_classic_ini(&self) -> gml::Result<()> {
++        match self.open_ini.as_ref() {
++            Some((ini, path)) => ini.write_to_file(self.decode_str(path.as_ref()).as_ref())
++                .map_err(|e| gml::Error::FunctionError("ini_write".into(), e.to_string())),
++            None => Ok(()),
++        }
++    }
++
+     pub fn ini_write_string(&mut self, args: &[Value]) -> gml::Result<Value> {
+         let (section, key, val) = expect_args!(args, [string, string, string])?;
+         match self.open_ini.as_mut() {
+             Some((ini, _)) => {
+                 ini.with_section(Some(section.as_ref())).set(key.as_ref(), val.as_ref());
++                self.persist_classic_ini()?;
+                 Ok(Default::default())
+             },
+             None => Err(gml::Error::FunctionError(
+@@ -6654,6 +6666,7 @@
+         match self.open_ini.as_mut() {
+             Some((ini, _)) => {
+                 ini.with_section(Some(section.as_ref())).set(key.as_ref(), val.to_string());
++                self.persist_classic_ini()?;
+                 Ok(Default::default())
+             },
+             None => Err(gml::Error::FunctionError(
