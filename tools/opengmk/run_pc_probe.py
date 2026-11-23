@@ -35,6 +35,8 @@ def main():
     parser.add_argument('--game-dir', type=Path, required=True)
     parser.add_argument('--report-dir', type=Path, required=True)
     parser.add_argument('--temp-dir', type=Path, required=True)
+    parser.add_argument('--audio-latency-ms', type=float)
+    parser.add_argument('--audio-diagnostics', action='store_true')
     args = parser.parse_args()
     runtime, game, report, temp = [p.resolve() for p in (
         args.runtime, args.game_dir, args.report_dir, args.temp_dir)]
@@ -46,6 +48,10 @@ def main():
     temp.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update(TEMP=str(temp), TMP=str(temp), RUST_BACKTRACE='1')
+    if args.audio_latency_ms is not None:
+        env['OPENGMK_AUDIO_LATENCY_MS'] = str(args.audio_latency_ms)
+    if args.audio_diagnostics:
+        env['OPENGMK_AUDIO_DIAGNOSTICS'] = '1'
     for key in ['APPDATA', 'LOCALAPPDATA', 'USERPROFILE']:
         location = temp / key.lower()
         location.mkdir(exist_ok=True)

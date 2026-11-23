@@ -1,0 +1,114 @@
+--- a/src/session/sio.rs
++++ b/src/session/sio.rs
+@@ -1,5 +1,7 @@
+ use crate::{error::Error, session, source::{ChannelCount, SampleRate, Source}};
+ use std::{sync::Mutex, os::raw::c_int};
++use std::sync::{Arc, atomic::{AtomicBool, AtomicU32, Ordering}};
++use std::time::{Duration, Instant};
+ use libsoundio_sys::*;
+ 
+ use super::DeviceImpl;
+@@ -178,13 +180,24 @@
+             (*outstream).sample_rate = device.sample_rate;
+             (*outstream).layout = device.layout;
+             (*outstream).format = device.format;
+-            (*outstream).software_latency = 0.01;
++            // Host scheduling margin, in seconds. Preserve the original 10ms
++            // default unless explicitly testing another finite buffer size.
++            (*outstream).software_latency = std::env::var("OPENGMK_AUDIO_LATENCY_MS")
++                .ok().and_then(|s| s.parse::<f64>().ok())
++                .filter(|v| v.is_finite() && *v >= 10.0 && *v <= 500.0)
++                .unwrap_or(10.0) / 1000.0;
++            (*outstream).underflow_callback = Some(audio_underflow);
+             let err = soundio_outstream_open(outstream);
+             if err != 0 {
+                 panic!("failed to open outstream: {}", std::ffi::CStr::from_ptr(soundio_strerror(err)).to_str().unwrap());
+             }
+             if (*outstream).layout_error != 0 {
+                 panic!("unable to set channel layout: {}", std::ffi::CStr::from_ptr(soundio_strerror((*outstream).layout_error)).to_str().unwrap());
++            }
++            if std::env::var_os("OPENGMK_AUDIO_DIAGNOSTICS").is_some() {
++                eprintln!("[audio-diag] rate={} channels={} actual_latency_ms={:.3}",
++                    (*outstream).sample_rate, (*outstream).layout.channel_count,
++                    (*outstream).software_latency * 1000.0);
+             }
+             assert_eq!((*outstream).sample_rate, device.sample_rate);
+             assert_eq!((*outstream).layout.channel_count, device.layout.channel_count);
+@@ -218,11 +231,26 @@
+             let mut guard = self.stream.lock().unwrap();
+             let mut extra = Vec::with_capacity(32768);
+             let mut exit = false;
++            let stats = Arc::new(AudioStats { underflows: AtomicU32::new(0),
++                max_callback_us: AtomicU32::new(0), stop: AtomicBool::new(false),
++                enabled: std::env::var_os("OPENGMK_AUDIO_DIAGNOSTICS").is_some() });
++            if stats.enabled {
++                let report = Arc::clone(&stats);
++                std::thread::spawn(move || {
++                    while !report.stop.load(Ordering::Relaxed) {
++                        std::thread::sleep(Duration::from_secs(3));
++                        eprintln!("[audio-diag] underflows={} max_callback_us={}",
++                            report.underflows.load(Ordering::Relaxed),
++                            report.max_callback_us.swap(0, Ordering::Relaxed));
++                    }
++                });
++            }
+             let mut param = UdonCallbackParam {
+                 source: &mut source as *mut Box<dyn Source> as _,
+                 extra: &mut extra,
+                 exit: &mut exit,
+                 err: Ok(()),
++                stats: Arc::clone(&stats),
+             };
+             (**guard).userdata = &mut param as *mut _ as _;
+             let err = soundio_outstream_start(*guard);
+@@ -232,6 +260,7 @@
+             while !exit {
+                 soundio_wait_events(self.sio);
+             }
++            stats.stop.store(true, Ordering::Relaxed);
+             param.err
+         }
+     }
+@@ -253,6 +282,33 @@
+     extra: *mut Vec<f32>,
+     exit: *mut bool,
+     err: Result<(), Error>,
++    stats: Arc<AudioStats>,
++}
++
++struct AudioStats {
++    underflows: AtomicU32,
++    max_callback_us: AtomicU32,
++    stop: AtomicBool,
++    enabled: bool,
++}
++
++extern "C" fn audio_underflow(outstream: *mut SoundIoOutStream) {
++    unsafe {
++        let param = (*outstream).userdata as *mut UdonCallbackParam;
++        if !param.is_null() {
++            (&(*param).stats).underflows.fetch_add(1, Ordering::Relaxed);
++        }
++    }
++}
++
++struct CallbackTimer<'a> { stats: &'a AudioStats, start: Option<Instant> }
++impl Drop for CallbackTimer<'_> {
++    fn drop(&mut self) {
++        if let Some(start) = self.start {
++            self.stats.max_callback_us.fetch_max(start.elapsed().as_micros().min(u32::MAX as u128) as u32,
++                                                Ordering::Relaxed);
++        }
++    }
+ }
+ 
+ unsafe extern "C" fn udon_callback(
+@@ -261,6 +317,8 @@
+     frame_count_max: c_int,
+ ) {
+     let param = (*outstream).userdata as *mut UdonCallbackParam;
++    let _timer = CallbackTimer { stats: &(*param).stats,
++        start: if (&(*param).stats).enabled { Some(Instant::now()) } else { None } };
+     let format = (*outstream).format;
+     let channel_count = (*outstream).layout.channel_count as usize;
+     let mut areas: *mut SoundIoChannelArea = std::ptr::null_mut();
