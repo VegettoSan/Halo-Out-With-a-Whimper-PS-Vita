@@ -44,6 +44,6 @@ Modified runtime SHA-256: `02de3629b99b4382030fb2484b8e950be617c5b524643f0ecc976
 
 ## Limits and next experiment
 
-Combat, collisions, enemy behavior, weapon handling, audio output, save persistence after restart and long-run stability remain UNTESTED. There is no measured Vita performance and **no functional VPK**. WinVita remains an alternative; no D3D8 renderer work was performed.
+At the E014 cutoff, combat, collisions, enemy behavior, weapons, audio output, restart persistence and long-run stability were UNTESTED. **E015 now verifies basic PC arena gameplay through cooperative owner input** and fixes profile initialization; intermittent audio/restart-persistence limitations remain. See [Firefight probe](OPENGMK_FIREFIGHT_PROBE.md). There is no measured Vita performance and **no functional VPK**. WinVita remains an alternative; no D3D8 renderer work was performed.
 
-Next high-information experiment: launch one original Firefight arena on PC and record movement, a weapon interaction, enemy spawning, audio and any first failure, using the same immutable EXE and a fresh run directory. Keep fixes in the runtime, preserving original GML.
+The original arena experiment is recorded in E015. Next: restart with a UI-selected profile to verify persistence, then reproduce any audio cuts under a bounded load test. Keep fixes in the runtime, preserving original GML.

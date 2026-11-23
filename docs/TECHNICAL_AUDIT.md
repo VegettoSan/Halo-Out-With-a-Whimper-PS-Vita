@@ -1,6 +1,6 @@
 # Technical audit — session 2026-11-22 local / 2026-11-23 UTC
 
-**Scope:** VERIFIED archive/PE inspection, project recovery, independent project inventory, the initial failed OpenGMK launch, a successful modified-runtime PC menu trial and a host-only WinVita loader probe. No original Windows runner execution, ARM game execution, Vita build or device test. Detailed attempts: [EXPERIMENTS.md](EXPERIMENTS.md), E001–E014.
+**Scope:** VERIFIED archive/PE inspection, recovery/inventory, modified-runtime PC menu and first-arena trials, and host-only WinVita mapping. E015 adds owner-operated gameplay, process memory/audio measurements and a bounded INI correction. No original Windows runner execution, ARM game execution, Vita build or device test. Detailed attempts: [EXPERIMENTS.md](EXPERIMENTS.md), E001–E015.
 
 | Input | Size (bytes) | SHA-256 | Assessment |
 | --- | ---: | --- | --- |
@@ -96,6 +96,18 @@ The native modal backend respects three custom buttons, return values 1/2/3, Esc
 
 Rust/Cargo were installed locally because absent; existing MSVC/Windows SDK/CMake/Ninja were reused. One build failed on MSBuild tracking-file paths; a new shorter build path with existing Ninja succeeded. Exact source/build/binary identities, controlled-test output and private screenshots are recorded in [OPENGMK_PC_PROBE.md](OPENGMK_PC_PROBE.md) and E011–E014. **This is a Windows PC menu proof, not an ARM/Vita or combat proof.**
 
+## First PC arena — E015 basic gameplay PASS; full audit partial
+
+**VERIFIED visual/owner evidence:** original Site 117 loads, enemies move/attack, damage/death/respawn occur, pause freezes the scene, Resume returns to combat and Exit reaches the postgame report. The owner took over real keyboard/mouse input and confirmed movement/jump, aiming/firing, ground/wall collisions and damage; visible projectiles/ammo consumption corroborate combat. This is cooperative manual testing, not an automated gameplay regression or complete original-runner parity comparison.
+
+**Runtime correction VERIFIED:** write-through in the two INI write builtins makes original startup settings visible before explicit close. This resolves the observed cycling default helmet/incorrect colors without a GML/sprite override. The inferred reason is a classic profile-write behavior difference; native Windows API visibility was tested, but original-runner INI calls were not dynamically traced.
+
+**Audio PARTIAL:** owner initially heard cuts; runtime-specific session peaks were nonzero. Diagnostics measured 109 underrun notifications in one run versus one in a later longer snapshot; the owner then reported no noticeable cuts. No causal audio fix is claimed. Requests for 10/80 ms both produced 22-ms WASAPI buffers; that experiment did not establish a buffer adjustment. Deliberate producer/process stalls in an audio-only fixture recovered, so speculative starvation code changes were not applied.
+
+**Memory VERIFIED:** Windows process peak working sets in three snapshots were approximately 257/258/239 MiB; private-byte maxima approximately 192/192/182 MiB. These exclude a full GPU/system accounting and do not prove Vita fit or optimization. Game frame times/displayed FPS were not measured. The audio callback timing is a separate quantity.
+
+Corrected diagnostic runtime SHA-256 `5d8f24087ad253952910964a967cccf9a4ad9939769c202ee859629cf0253f6e`. Original hashes/corpus remain intact; no new recovery or dependency installation. Restart persistence and extended stability remain UNTESTED: physical Escape stopped CUA and the owner retained the running game. See [full E015 report](OPENGMK_FIREFIGHT_PROBE.md).
+
 ## D2Vita / newly supplied WinVita — partial evidence for route A
 
 **VERIFIED locally:** D2Vita's `VERSION` is 0.2.3. Its archived `third_party/winx86` directory is empty. The subsequently supplied **WinVita** tree contains the PE loader, bridge, Box86-derived ARMv7 dynarec, shims and DirectSound code. Its CMake project version is 0.1.0; no source commit ID was supplied. Local README claims of “no prewritten shims” are superseded by actual shim source files in this snapshot.
@@ -115,7 +127,7 @@ Name-only comparison: D2Vita's documented combined engine/game table matches **2
 
 ## Remaining gates
 
-Exact vendor patch/build, PC combat/parity, native ARM runtime/backend portability, renderer fidelity, memory/frame pacing, Vita input/scaling, audio output, suspend/resume and save persistence remain UNTESTED. PC main-menu interaction is now VERIFIED. **No functional VPK exists.** No title ID was selected or package generated.
+Exact vendor patch/build, full combat/rendering parity, ARM/native backend portability, game frame pacing, Vita controls/scaling, audio continuity under repeatable stress, suspend/resume and restart persistence remain open. Basic PC arena gameplay and real input are VERIFIED at the scope stated above. **No functional VPK exists.** No title ID was selected or package generated.
 
 ## Repeatable local baseline
 

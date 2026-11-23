@@ -40,3 +40,7 @@ See [ADR-001](DECISIONS.md) for comparison, effort uncertainty, licensing observ
 ## PC menu update — 2026-11-23 UTC
 
 **VERIFIED E014:** route B now reaches the original interactive PC main menu and Firefight map/difficulty selection after a faithful runtime-only Windows `show_message_ext` implementation. No GML or recovered resources changed. The next test is an original PC arena; combat parity, audio, ARM portability and Vita performance remain UNTESTED. This supersedes only the current-menu blocker above, retaining E007's failed baseline. See [ADR-002](DECISIONS.md) and [reproduction details](OPENGMK_PC_PROBE.md). No VPK was generated.
+
+## First arena update — E015
+
+**VERIFIED:** original Site 117 gameplay works at a basic cooperative manual-test scope: movement/jump, aim/fire, enemies, collisions/damage and pause/return. A runtime INI adapter fixes default-profile visibility/cycling helmets. Audio has a measured/reported intermittent issue whose cause is not proven fixed; restart persistence remains untested after CUA stopped. **INFERRED:** enough PC reuse is demonstrated to plan native Vita adapters; no ARM/Vita viability or performance is established. [ADR-003](DECISIONS.md) retains route B and [the arena report](OPENGMK_FIREFIGHT_PROBE.md) defines the limits. WinVita remains dormant.

@@ -43,3 +43,13 @@
 **Decision:** retain route B as the next research priority. A native Windows dialog and a successful PC renderer do not establish a Vita backend. Keep WinVita available without expanding this session into D3D8 development. No GML rewriting, binary game patching or asset substitution was needed for this milestone.
 
 **Next discriminating test:** one original Firefight arena on PC, verifying movement, one weapon action, enemy spawning and audio, with bounded runtime-only fixes for any observed blocker. Physical Vita, performance, suspend/resume and persistent-save claims remain unsupported. No VPK packaging is justified by this menu-only result.
+
+## ADR-003 — 2026-11-23 UTC: preliminary PC gameplay base established
+
+**Status:** Accepted evidence for backend planning; no final Vita viability decision or phase completion.
+
+**VERIFIED E015:** original Site 117 loads; owner-operated movement/jump, aim/fire, collisions and damage work. Enemies, projectiles, respawns, pause/resume and postgame return were observed. Original EXE/GML/resources stay unchanged. Runtime INI write-through fixes default-profile visibility and the cycling-helmet symptom; exact proprietary-runner INI behavior remains inferred. The initially reported audio cuts were not noticeable in the owner's later test, but their cause remains unresolved; no speculative audio fix is adopted.
+
+**Decision:** OpenGMK is a credible **initial PC gameplay base** for designing native Vita rendering/input/audio/file adapters while retaining original logic. Do not interpret this as demonstrated ARM compilation, Vita RAM fit, full parity, stable frame pacing or release readiness. Keep WinVita dormant; no new renderer investigation is justified by the current evidence.
+
+**Next gate:** restart/profile persistence, repeatable audio continuity and a bounded gameplay regression. Process memory peaks (~239–258 MiB on this Windows host) warrant measurement and allocation analysis before a native device prototype, without assuming these translate directly to Vita. Physical Escape ended computer control; the restart test was not completed. No VPK generated.

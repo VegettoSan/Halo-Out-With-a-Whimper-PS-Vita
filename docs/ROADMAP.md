@@ -3,7 +3,7 @@
 | Phase | Goal | Minimum exit evidence | Current status |
 | --- | --- | --- | --- |
 | P0 | Archive/PE audit, baseline, tools | Hash+CRC, safe input layout, static PE features | COMPLETE: E001–E003; original hashes preserved, local tools inventoried |
-| P1 | Recover/evaluate runtime approaches | Exact runner identification, extraction attempt, Win32/import cost and an A/B decision supported by tests | ADVANCED/PARTIAL: recovery PASS; modified OpenGMK real PC menu/interaction PASS; WinVita loader PASS only; exact vendor patch and PC combat fidelity remain open |
+| P1 | Recover/evaluate runtime approaches | Exact runner identification, extraction attempt, Win32/import cost and an A/B decision supported by tests | ADVANCED/PARTIAL: recovery, PC menu and basic owner-operated arena PASS; exact vendor patch/full fidelity, intermittent audio and restart persistence remain open |
 | P2 | Native Vita proof of concept | True execution of recovered/original game logic, useful graphics, basic input and repeatable logs | NOT STARTED |
 | P3 | Functional parity | Real menu and one Firefight arena; controls, audio and persistent state if present, with regression evidence | NOT STARTED |
 | P4 | Performance and release review | Measured device frametimes/memory, stability, correctness and distribution-rights review | NOT STARTED |
@@ -17,4 +17,4 @@
 - Owner selects an unused title ID before any VPK packaging and separately approves public distribution.
 
 ## Next milestone
-Continue P1: run one original Firefight arena on PC and record movement, a weapon interaction, enemy spawning, audio and the first failure if any. The missing-dialog experiment now passes with a real original menu and interaction (ADR-002, E014). Route B remains the research priority; P2 has not started. No phase advancement to native Vita is implied by a Windows PC menu.
+Continue P1: restart the corrected runtime with a UI-selected profile and verify persistence; investigate audio only with a reproducible discontinuity. E015 establishes an initial original PC arena gameplay base and a bounded INI correction. Route B remains the priority (ADR-003); native-backend planning is justified, but P2 implementation/device evidence has not started and full P1 closure is not claimed.
