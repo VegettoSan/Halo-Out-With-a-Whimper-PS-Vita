@@ -1,5 +1,7 @@
 # Porting strategy — prioritize faithful reuse
 
+**E018 evidence:** route B preserves original startup through a real PC dialog and owner choice, then stops at an explicit Process service. CleanMem's Windows effects are measured; Vita exposes defined failure for unsupported working-set operations rather than fake success. Updated ARM ELF/VELF passes, execution remains untested. Continue bounded services/diagnostics before graphics or packaging; [ADR-006](DECISIONS.md), [E018](OPENGMK_CLEANMEM_PROBE.md).
+
 **E017 evidence:** route B now builds the existing compiler/VM for Vita ARM and executes original startup on PC until an explicit CleanMem external-service block. This supports incremental native services without replacing GML/VM. It does not establish ARM execution or a native frontend; [ADR-005](DECISIONS.md) and [VM probe](OPENGMK_VM_PROBE.md) set the next gate.
 
 **Current E016 evidence:** route B additionally has PC profile restart PASS and real reader/parser ARM build/link/VELF conversion PASS. Full native VM execution remains blocked by frontend/OS/audio services, with graphics and device memory untested. [ADR-004](DECISIONS.md) and [native probe](OPENGMK_NATIVE_PROBE.md) define the next bounded original-startup experiment; historical findings below retain their original scope.

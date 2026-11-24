@@ -1,5 +1,7 @@
 # Technical audit — session 2026-11-22 local / 2026-11-23 UTC
 
+**E018 follow-up:** [Audited CleanMem adapter + updated ARM ELF/VELF PASS](OPENGMK_CLEANMEM_PROBE.md). Windows differential test performs actual OS queries/cleanup; original PC startup executes 15 instructions through the owner-operated dialog, then explicitly blocks at `set_program_priority`. Vita working-set operations are unsupported and return the helper's failure value, with separate free-memory diagnostics; no native cleanup success or device execution is claimed. Original data, E015 binary and audio remain unchanged.
+
 **E017 follow-up:** [Existing compiler/VM ARM build and VELF conversion PASS](OPENGMK_VM_PROBE.md); original startup executes four instructions on PC and stops at the first CleanMem service request. Original compiler/actions/events/collisions are retained. No ARM execution, native graphics/audio or functional VPK is established.
 
 **E016 follow-up, 2026-11-24 UTC:** [Native feasibility report](OPENGMK_NATIVE_PROBE.md) supersedes only current persistence/ARM-absence findings below. PC EVA/Elite profile persistence PASS across full process exits; original reader/parser compile and link as ARMv7 hard-float ELF, and VELF conversion PASS. Original data loads and 1,073 GML units parse on host; full ARM VM/device execution BLOCKED. Audio underrun notifications recur; no fix claimed. Original hashes/corpus remain unchanged, new recovery zero, no functional VPK.
@@ -78,7 +80,7 @@ Also VERIFIED: **845 object events, 875 actions, 2,120 sprite frames, 3,917 room
 
 Sprite pixel arrays alone total 27,451,468 RGBA bytes: a decoded-data count, **not** runtime RAM/VRAM or a Vita memory-fit result. Collision masks, font rendering, all script semantics and audiovisual fidelity have not been compared against the original runner.
 
-The included **`CleanMem.dll`** is 1,024 bytes, PE32 x86, SHA-256 `dac23ed1af08cb7409a18dc09b0c35230e1b314ff49711394c66bd69ae86548c`. Its imports are `GetCurrentProcessId`, `OpenProcess`, `CloseHandle`, `EmptyWorkingSet`, `GetProcessMemoryInfo`. Recovered startup logic calls its two exports before the priority dialog. **INFERRED:** a small native OS adapter is needed on Vita; an x86 DLL cannot be loaded natively by an ARM OpenGMK port. Its result values were not instrumented in the PC trial.
+The included **`CleanMem.dll`** is 1,024 bytes, PE32 x86, SHA-256 `dac23ed1af08cb7409a18dc09b0c35230e1b314ff49711394c66bd69ae86548c`. Its imports are `GetCurrentProcessId`, `OpenProcess`, `CloseHandle`, `EmptyWorkingSet`, `GetProcessMemoryInfo`. **VERIFIED E018:** startup binds both exports and calls cleanup before the priority dialog; the query wrapper has zero callers. Both exports are zero-argument cdecl real returns: cleanup BOOL and signed32 current WorkingSetSize (zero on failure). The native adapter and its explicit unsupported-operation failure policy are documented in [E018](OPENGMK_CLEANMEM_PROBE.md). An x86 DLL cannot be loaded natively by ARM OpenGMK.
 
 ## Initial OpenGMK PC trial — E007 FAIL before menu (retained)
 

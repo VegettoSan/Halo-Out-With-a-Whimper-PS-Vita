@@ -1,5 +1,7 @@
 # E017 — original OpenGMK compiler/VM behind explicit service boundaries
 
+**Follow-up E018:** [CleanMem contract and real dialog execution](OPENGMK_CLEANMEM_PROBE.md) supersede the current startup block: Windows reaches 15 instructions after the owner's choice, then stops at `set_program_priority`. Updated ARM ELF/VELF passes; Vita working-set operations explicitly report unsupported failure. E017 evidence below is retained with its original scope.
+
 **2026-11-23 local / 2026-11-24 UTC. VERIFIED:** the actual compiler, action system and VM now build/link for Vita ARMv7; the same source executes original startup in a PC headless process. It stops at the real `external_define` request for CleanMem, without fabricating an external ID or skipping the call. **ARM execution remains BLOCKED/UNTESTED on hardware. No functional VPK exists.** Base main: `c013982`.
 
 ## Implemented and tested

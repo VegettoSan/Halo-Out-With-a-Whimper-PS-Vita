@@ -1,6 +1,6 @@
 # Halo: Out With a Whimper — PS Vita (research port)
 
-> **P1 / native feasibility research.** Recovery, PC menu/basic Firefight gameplay and profile restart persistence are verified. The existing OpenGMK compiler/VM now compile/link for Vita ARMv7 (ELF/VELF); original startup executes on PC until an explicit CleanMem service block. ARM execution and audio continuity remain open. No playable Vita port, functional VPK or final architecture is verified.
+> **P1 / native feasibility research.** Recovery, PC menu/basic Firefight gameplay and profile restart persistence are verified. The existing OpenGMK compiler/VM compile/link for Vita ARMv7 (ELF/VELF). E018 adapts CleanMem, executes the real priority dialog on PC and resumes after the owner's choice to an explicit `set_program_priority` block. Native cleanup equivalence, ARM execution and audio continuity remain open. No playable Vita port, functional VPK or final architecture is verified.
 
 This repository documents research toward a native PlayStation Vita adaptation of the Windows *Halo: Out With a Whimper — Firefight Demo*. **Primary goal: reuse the original executable/data/game logic wherever technically possible, not recreate the game from scratch.**
 
@@ -41,6 +41,7 @@ See [technical audit](docs/TECHNICAL_AUDIT.md) for evidence and uncertainty.
 - [docs/TOOLS.md](docs/TOOLS.md): local tool inventory and external references.
 - [docs/OPENGMK_NATIVE_PROBE.md](docs/OPENGMK_NATIVE_PROBE.md): E016 persistence, real ARM build evidence, memory estimates and native adapter plan.
 - [docs/OPENGMK_VM_PROBE.md](docs/OPENGMK_VM_PROBE.md): E017 original compiler/VM, explicit native service boundaries and reproducible startup test.
+- [docs/OPENGMK_CLEANMEM_PROBE.md](docs/OPENGMK_CLEANMEM_PROBE.md): E018 audited helper contract, real human dialog, PC/ARM evidence and next native-service gate.
 - [docs/ASSET_POLICY.md](docs/ASSET_POLICY.md): files never to upload.
 - [config/port_identity.json](config/port_identity.json): title ID unassigned.
 
