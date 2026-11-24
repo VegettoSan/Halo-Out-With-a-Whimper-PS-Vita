@@ -1,5 +1,7 @@
 # Tooling checklist (prefer existing local tools)
 
+**E019 reuse/device proof:** same offline toolchain; priority adapter, persistent diagnostic, optional owner High policy and ID-gated private packager added. Both revisions ran the original VM prefix on physical Vita 1000; FTP upload/retrieval and installed SELF hashes verified. No game/binary distribution in Git. [Commands, memory observations and remaining services](OPENGMK_PRIORITY_PROBE.md).
+
 **E018 reuse:** same offline Rust/MSVC/WSL SDK; existing GNU objdump 2.46 used for complete helper inspection. `prepare_cleanmem_probe.py` reuses E017 plus E015 modal/INI patches in fresh copies; the hash-checked differential test, portable adapter and real human-dialog provider are under tools/opengmk/. PC, desktop check, ARM link and VELF conversion passed first attempts; no new crate/tool/install. [Exact commands and limits](OPENGMK_CLEANMEM_PROBE.md).
 
 **E017 reuse:** existing private Windows Rust/Cargo 1.100.0 and WSL hard-float SDK reused entirely offline, without downloads/installations. New headless preparer, service/heap instrumentation, original-data runner and source-reuse auditor are under tools/opengmk/. Both real VM ARM build/VELF conversion and desktop library check pass. See [VM probe](OPENGMK_VM_PROBE.md) for exact commands and remaining native import obligations.

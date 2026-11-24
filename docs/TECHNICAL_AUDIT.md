@@ -1,5 +1,7 @@
 # Technical audit — session 2026-11-22 local / 2026-11-23 UTC
 
+**E019 follow-up:** [Physical Vita 1000 original-data compiler/VM execution PASS](OPENGMK_PRIORITY_PROBE.md), 11 instructions to Dialog and 15 with owner-selected High policy to explicit Process block; Windows reaches Files after measured priority changes. Native heap requests/free-memory and persisted logs measured on device. Private HOWAW1178 diagnostic VPK exists; no native game graphics/audio or playability established. Original data unchanged.
+
 **E018 follow-up:** [Audited CleanMem adapter + updated ARM ELF/VELF PASS](OPENGMK_CLEANMEM_PROBE.md). Windows differential test performs actual OS queries/cleanup; original PC startup executes 15 instructions through the owner-operated dialog, then explicitly blocks at `set_program_priority`. Vita working-set operations are unsupported and return the helper's failure value, with separate free-memory diagnostics; no native cleanup success or device execution is claimed. Original data, E015 binary and audio remain unchanged.
 
 **E017 follow-up:** [Existing compiler/VM ARM build and VELF conversion PASS](OPENGMK_VM_PROBE.md); original startup executes four instructions on PC and stops at the first CleanMem service request. Original compiler/actions/events/collisions are retained. No ARM execution, native graphics/audio or functional VPK is established.

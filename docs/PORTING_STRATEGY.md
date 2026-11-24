@@ -1,5 +1,7 @@
 # Porting strategy — prioritize faithful reuse
 
+**E019 evidence:** route B now has physical Vita 1000 execution of unchanged original data through the existing compiler/VM: 11 instructions to Dialog, 15 under the owner-selected High diagnostic policy to Process. This establishes a native logic prefix, not renderer/audio/input parity or a playable port. Continue explicit native services, preserving original logic; [E019](OPENGMK_PRIORITY_PROBE.md).
+
 **E018 evidence:** route B preserves original startup through a real PC dialog and owner choice, then stops at an explicit Process service. CleanMem's Windows effects are measured; Vita exposes defined failure for unsupported working-set operations rather than fake success. Updated ARM ELF/VELF passes, execution remains untested. Continue bounded services/diagnostics before graphics or packaging; [ADR-006](DECISIONS.md), [E018](OPENGMK_CLEANMEM_PROBE.md).
 
 **E017 evidence:** route B now builds the existing compiler/VM for Vita ARM and executes original startup on PC until an explicit CleanMem external-service block. This supports incremental native services without replacing GML/VM. It does not establish ARM execution or a native frontend; [ADR-005](DECISIONS.md) and [VM probe](OPENGMK_VM_PROBE.md) set the next gate.

@@ -1,13 +1,14 @@
 {
   "project": "Halo: Out With a Whimper - PS Vita research",
   "display_name": "Halo: Out With a Whimper",
-  "vita_title_id": null,
-  "vita_title_id_status": "UNASSIGNED_OWNER_SELECTION_REQUIRED",
+  "vita_title_id": "HOWAW1178",
+  "vita_title_id_status": "OWNER_SELECTED_E019_PRIVATE_DIAGNOSTIC",
+  "diagnostic_dialog_policy": "OWNER_SELECTED_HIGH_BUTTON_3_E019_FOLLOWUP",
   "target_resolution": {
     "width": 960,
     "height": 544
   },
   "target_fps_initial": 30,
   "target_fps_status": "DESIGN_TARGET_NOT_MEASURED",
-  "packaging_status": "NOT_STARTED"
+  "packaging_status": "E019_PRIVATE_DIAGNOSTIC_NATIVE_VM_PREFIX_VERIFIED_NO_GAMEPLAY"
 }

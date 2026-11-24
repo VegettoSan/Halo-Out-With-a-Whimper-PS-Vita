@@ -37,7 +37,8 @@
 ## PS Vita specifics
 - Vita is ARMv7, while provided EXE is PE32 x86. Running it requires translation/adaptation; copying EXE into VPK is not enough.
 - Document input mapping, display scaling, renderer (especially possible D3D8), audio, memory, frame pacing, suspend/resume and save paths when a prototype exists.
-- No Vita title ID is assigned. Do not reuse an ID from Hungry Shark or HaloCEVita. Owner selects one before packaging.
+- Owner selected `HOWAW1178` for the E019 private diagnostic. Do not reuse an ID from Hungry Shark or HaloCEVita. Any different packaging identity requires owner selection.
+- For the current diagnostic the owner explicitly selected automatic High/button 3 (`--owner-dialog-high`). Preserve/log this specific policy; do not call it manual UI or use it to fake other unavailable services. Keep the prior manual/first-device evidence.
 - Test on physical Vita for real device conclusions; record environment and measurements. Reuse prior Vita projects only as technical references with license review.
 
 ## End-of-session summary (required)

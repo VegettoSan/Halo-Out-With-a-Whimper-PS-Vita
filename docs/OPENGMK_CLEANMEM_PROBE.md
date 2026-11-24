@@ -1,5 +1,7 @@
 # E018 — CleanMem contract and original startup beyond the real dialog
 
+**E019 follow-up:** [Verified Windows process/thread priority and first physical Vita VM-prefix run](OPENGMK_PRIORITY_PROBE.md). PC reaches Files/file_exists; physical Vita executes original startup to the missing real Dialog service. E018 evidence below retains its original scope.
+
 **2026-11-24 UTC. VERIFIED:** the reused OpenGMK VM binds both real CleanMem exports, performs the Windows cleanup, reaches the original priority dialog and resumes only after the owner's response. Startup advances from E017's 4 instructions to **15**, stopping honestly at `set_program_priority` (`Process`). The updated core builds/links for Vita and converts to VELF. **ARM execution is UNTESTED; no functional VPK exists.**
 
 ## Actual helper contract
