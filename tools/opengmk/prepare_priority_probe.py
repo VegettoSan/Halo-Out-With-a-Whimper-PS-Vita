@@ -35,11 +35,16 @@ def extend_priority(root):
  p=root/'gm8emulator/Cargo.toml';p.write_text(p.read_text(encoding='utf-8')+'\n[[bin]]\nname="priority-contract-probe"\npath="src/bin/priority_contract_probe.rs"\nrequired-features=["headless"]\n',encoding='utf-8')
 
 if __name__=='__main__':
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--owner-dialog-high',action='store_true',help='explicit owner-selected E019 diagnostic policy, native only unless host flag supplied');a=p.parse_args()
  repo=Path(__file__).resolve().parents[2];source=a.source.resolve();out=a.output.resolve()
  if not source.is_relative_to(repo/'local-tools') or not out.is_relative_to(repo/'local-tools') or out.exists():p.error('pristine local source, NEW local-tools output required')
  if subprocess.check_output(['git','-C',str(source),'rev-parse','HEAD'],text=True).strip()!=BASE or subprocess.check_output(['git','-C',str(source),'status','--porcelain'],text=True).strip():p.error('wrong or modified upstream')
  shutil.copytree(source,out,ignore=shutil.ignore_patterns('.git','target'))
  for name in ['0001-show-message-ext.patch','0002-classic-ini-write-through.patch']:patch_copy(out,repo/'patches/opengmk'/name)
  apply(out);finish_boundaries(out);extend(out,source);extend_priority(out)
+ if a.owner_dialog_high:
+  src=out/'gm8emulator/src';shutil.copyfile(Path(__file__).with_name('priority')/'owner_dialog_high.rs',src/'owner_dialog_high.rs')
+  p=src/'lib.rs';p.write_text(p.read_text(encoding='utf-8')+'\n#[cfg(feature="headless")] pub mod owner_dialog_high;\n',encoding='utf-8')
+  p=src/'runtime_services.rs';s=p.read_text(encoding='utf-8');marker='        if !self.interactive_dialog {';assert marker in s
+  s=s.replace(marker,'        if let Some(answer)=crate::owner_dialog_high::answer(request) { return answer; }\n'+marker,1);p.write_text(s,encoding='utf-8')
  print('E019 prepared; original compiler/VM preserved; no data or dependency changes')

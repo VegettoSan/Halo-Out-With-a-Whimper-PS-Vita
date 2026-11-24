@@ -13,10 +13,11 @@ def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 def main():
  p=argparse.ArgumentParser(description=__doc__)
  mode=p.add_mutually_exclusive_group(required=True);mode.add_argument('--prepare',action='store_true');mode.add_argument('--package',action='store_true')
- p.add_argument('--elf',type=Path);p.add_argument('--velf',type=Path);p.add_argument('--output',type=Path,required=True);p.add_argument('--title-id')
+ p.add_argument('--elf',type=Path);p.add_argument('--velf',type=Path);p.add_argument('--output',type=Path,required=True);p.add_argument('--title-id');p.add_argument('--app-version',default='00.19')
  p.add_argument('--wsl-distro',default='Ubuntu');p.add_argument('--sdk',default='/usr/local/vitasdk-hardfp');a=p.parse_args()
  root=Path(__file__).resolve().parents[2];out=a.output.resolve()
  if not out.is_relative_to(root/'build'):p.error('private output must stay under ignored build/')
+ if not re.fullmatch(r'\d{2}\.\d{2}',a.app_version):p.error('APP_VER must have NN.NN format')
  if a.package and (a.title_id is None or not re.fullmatch('[A-Z0-9]{9}',a.title_id)):p.error('owner-selected nine-character uppercase alphanumeric TITLE_ID required')
  def sdk(tool,*args):subprocess.run(['wsl','-d',a.wsl_distro,'--exec',a.sdk+'/bin/'+tool,*map(str,args)],check=True)
  if a.prepare:
@@ -29,6 +30,8 @@ def main():
   if b'E019_DIAGNOSTIC_STARTED' not in data or b'cf0661731e049371f30d2e953dcbad7236eb83c93f0b615fa819dbe913d8773f' not in data:p.error('not the E019 original-data diagnostic')
   out.mkdir(parents=True);sdk('vita-make-fself','-s',translate(str(velf)),translate(str(out/'eboot.bin')))
   manifest={'utc_prepared':datetime.now(timezone.utc).isoformat(),'experiment':'E019','title_id':None,'device_execution':'UNTESTED','purpose':'load/verify original EXE, compile real scripts/events, execute startup until actual unavailable dialog','files':{'eboot.bin':{'sha256':sha(out/'eboot.bin'),'bytes':(out/'eboot.bin').stat().st_size}},'elf_sha256':sha(elf),'velf_sha256':sha(velf),'original_exe_sha256':'cf0661731e049371f30d2e953dcbad7236eb83c93f0b615fa819dbe913d8773f','data_path':'ux0:data/howaw/HOWaW_FirefightDemov1.exe','logs':'ux0:data/howaw/diagnostics/e019-NNN/run.log','no_original_files_embedded':True,'vpk':None}
+  if b'OWNER_POLICY_HIGH' in data:
+   manifest.update(dialog_policy='owner selected High/button 3',purpose='original startup through explicitly configured High response; next real service expected Process/set_program_priority')
   (out/'manifest.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
   print('Prepared real VM SELF + manifest; no TITLE_ID, SFO or VPK generated.');return
  manifest=json.loads((out/'manifest.json').read_text(encoding='utf-8'))
@@ -36,7 +39,7 @@ def main():
  sfo=out/'sce_sys/param.sfo';vpk=out/'e019-private-diagnostic.vpk'
  if sfo.exists() or vpk.exists():p.error('preserve previous packaging; use a new prepared output')
  sfo.parent.mkdir(exist_ok=True)
- sdk('vita-mksfoex','-s','TITLE_ID='+a.title_id,'-s','APP_VER=00.19','HOWaW original VM diagnostic',translate(str(sfo)))
+ sdk('vita-mksfoex','-s','TITLE_ID='+a.title_id,'-s','APP_VER='+a.app_version,'HOWaW original VM diagnostic',translate(str(sfo)))
  with zipfile.ZipFile(vpk,'x',compression=zipfile.ZIP_DEFLATED) as archive:
   for name in ['eboot.bin','sce_sys/param.sfo']:archive.write(out/name,name)
  with zipfile.ZipFile(vpk) as archive:
