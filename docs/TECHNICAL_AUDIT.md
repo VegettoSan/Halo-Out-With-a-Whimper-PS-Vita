@@ -1,5 +1,7 @@
 # Technical audit — session 2026-11-22 local / 2026-11-23 UTC
 
+**E016 follow-up, 2026-11-24 UTC:** [Native feasibility report](OPENGMK_NATIVE_PROBE.md) supersedes only current persistence/ARM-absence findings below. PC EVA/Elite profile persistence PASS across full process exits; original reader/parser compile and link as ARMv7 hard-float ELF, and VELF conversion PASS. Original data loads and 1,073 GML units parse on host; full ARM VM/device execution BLOCKED. Audio underrun notifications recur; no fix claimed. Original hashes/corpus remain unchanged, new recovery zero, no functional VPK.
+
 **Scope:** VERIFIED archive/PE inspection, recovery/inventory, modified-runtime PC menu and first-arena trials, and host-only WinVita mapping. E015 adds owner-operated gameplay, process memory/audio measurements and a bounded INI correction. No original Windows runner execution, ARM game execution, Vita build or device test. Detailed attempts: [EXPERIMENTS.md](EXPERIMENTS.md), E001–E015.
 
 | Input | Size (bytes) | SHA-256 | Assessment |

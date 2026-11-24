@@ -1,6 +1,6 @@
 # Halo: Out With a Whimper — PS Vita (research port)
 
-> **P1: compatibility research.** Recovery, the real PC menu and basic owner-operated Firefight gameplay in modified OpenGMK are verified. Audio continuity/restart persistence remain open. No playable Vita port, functional VPK or final architecture is verified.
+> **P1 / native feasibility research.** Recovery, PC menu/basic Firefight gameplay and profile restart persistence are verified. Real OpenGMK reader/parser components compile/link for Vita ARMv7 (ELF/VELF); full ARM interpreter/game execution and audio continuity remain open. No playable Vita port, functional VPK or final architecture is verified.
 
 This repository documents research toward a native PlayStation Vita adaptation of the Windows *Halo: Out With a Whimper — Firefight Demo*. **Primary goal: reuse the original executable/data/game logic wherever technically possible, not recreate the game from scratch.**
 
@@ -39,6 +39,7 @@ See [technical audit](docs/TECHNICAL_AUDIT.md) for evidence and uncertainty.
 - [docs/TECHNICAL_AUDIT.md](docs/TECHNICAL_AUDIT.md): facts, hashes and unknowns.
 - [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md): research log.
 - [docs/TOOLS.md](docs/TOOLS.md): local tool inventory and external references.
+- [docs/OPENGMK_NATIVE_PROBE.md](docs/OPENGMK_NATIVE_PROBE.md): E016 persistence, real ARM build evidence, memory estimates and native adapter plan.
 - [docs/ASSET_POLICY.md](docs/ASSET_POLICY.md): files never to upload.
 - [config/port_identity.json](config/port_identity.json): title ID unassigned.
 

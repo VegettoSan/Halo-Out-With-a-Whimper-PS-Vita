@@ -53,3 +53,17 @@
 **Decision:** OpenGMK is a credible **initial PC gameplay base** for designing native Vita rendering/input/audio/file adapters while retaining original logic. Do not interpret this as demonstrated ARM compilation, Vita RAM fit, full parity, stable frame pacing or release readiness. Keep WinVita dormant; no new renderer investigation is justified by the current evidence.
 
 **Next gate:** restart/profile persistence, repeatable audio continuity and a bounded gameplay regression. Process memory peaks (~239–258 MiB on this Windows host) warrant measurement and allocation analysis before a native device prototype, without assuming these translate directly to Vita. Physical Escape ended computer control; the restart test was not completed. No VPK generated.
+
+## ADR-004 — 2026-11-24 UTC: native OpenGMK subset viable; full runtime requires adapters
+
+**Status:** accepted research direction, provisional native implementation boundary. Owner requested this feasibility work; no publication or packaging authorization implied.
+
+**VERIFIED E016:** PC profile survives process exit/restart with new temp/profile; EVA/Elite restored, saved INI hash unchanged. Existing runtime/audio untouched. Audio underrun notifications recur (0/744 across differing workloads), so continuity remains unresolved. Strict reader/parser and independent math/RNG/atlas modules compile for Vita ARMv7; real-data diagnostic links hard-float ELF and converts to VELF. Host execution loads original data and parses 1,073 nonempty GML units with zero syntax errors. **Full VM/game ARM execution remains BLOCKED.**
+
+**Decision:** continue route B through the existing compiler/VM and native platform services. Reuse installed hard-float WSL SDK; use scalar Rust decompression initially after measured simd-adler32 failure; disable incompatible symbol stripping for relocation conversion. Do not reinstall SDKs or require cargo-vita merely to wrap the demonstrated build. Keep source/dependency baselines and earlier failures. No final graphics backend selected: prototype a real `RendererTrait` implementation against installed vitaGL after exact shader/readback checks, with direct GXM available if that fails. No mandatory kernel plugin adopted.
+
+**Concrete blockers:** full runner's clipboard/X11/xcb dependency fails the Windows cross-build; ramen has no Vita host; GL 3.3/GLSL330/GLX cannot be treated as compatible with vitaGL; libsoundio has no Vita sink; non-x86 CleanMem calls would launch a wow64/Wine helper. `Game` couples compiler/VM to these services, so the full interpreter is not yet an independently compiled library. Keep original room/object/weapon/collision logic; change the host seams, not GML.
+
+**Memory:** 83.2 MiB original payload and 80 MiB candidate sprite/background atlas capacity establish a concrete peak-allocation risk, not Vita RAM consumption or a failed fit test. Measure allocation lifetime and device headroom before asset changes. No performance estimate or phase completion is justified.
+
+**Next gate:** compile the unchanged scripts/events and execute original startup through explicit native host services to the actual modal request, capturing first unsupported call/heap peak; then attach useful native graphics/input/audio. [Evidence, reproducible commands and staged prototype plan](OPENGMK_NATIVE_PROBE.md). A/C remain alternatives without new execution evidence. No functional VPK exists.

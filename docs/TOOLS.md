@@ -1,5 +1,11 @@
 # Tooling checklist (prefer existing local tools)
 
+## E016 inventory update — 2026-11-24 UTC
+
+VERIFIED existing WSL hard-float VitaSDK: GCC 15.2.0, SDK build 2026-05-24, newlib `fbb8375870d799758e0b4358d2f1708781aa26a6`, vita-toolchain `71f3789342f610a4eb3ba50fc33292c4900c6666`; SDL2/vitaGL already present in WSL soft/hard-float SDKs. Windows SDK remains soft-float and cannot link the hard-float Rust objects. Existing private Rust/Cargo 1.100.0 reused; missing rust-src/std build dependencies and target num_threads/x11-clipboard/xcb fetched. cargo-vita absent from checked paths, unnecessary for direct Cargo ELF research. Stable plus process-local RUSTC_BOOTSTRAP enables the bounded build-std test; recommended upstream nightly workflow remains separate.
+
+Tooling incident: an initial version command without the private Rust home variables triggered an unnecessary default stable toolchain install/synchronization outside the checkout. No cleanup or other external-project edits were attempted; all later Rust commands used explicit private homes. Do not describe E016 as zero-download/zero-external-write work. Exact successful/failed commands, SDK identities, new shareable probes and limits are in [OPENGMK_NATIVE_PROBE.md](OPENGMK_NATIVE_PROBE.md); raw evidence is ignored under reports/local/native-probe-20261123/. No SDK reinstall, cargo-vita installation or VPK occurred.
+
 **Host:** Windows development machine. Codex should inventory local utilities first; do not download or reinstall everything reflexively.
 
 ## Baseline

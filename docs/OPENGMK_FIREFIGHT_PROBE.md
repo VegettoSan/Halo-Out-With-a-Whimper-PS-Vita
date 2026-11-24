@@ -1,5 +1,7 @@
 # E015 — original Firefight arena on PC
 
+**Follow-up:** [E016](OPENGMK_NATIVE_PROBE.md) now verifies full-process restart persistence for EVA helmet/Elite character using the same E015 runtime. Audio remains partial (underrun notifications recur); no new audio or INI patch was made. The historical E015 observations/limitations below are retained.
+
 **2026-11-23 UTC. Result: basic gameplay PASS, complete compatibility audit PARTIAL.** The original first arena (Site 117) loads and can be played through OpenGMK without editing EXE, GMK, GML or recovered assets. The owner supplied live keyboard/mouse input while the agent observed the game and collected process/audio diagnostics. Persistence after a full restart remains UNTESTED because physical Escape stopped computer control during the live trial.
 
 ## What actually worked

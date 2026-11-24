@@ -1,5 +1,7 @@
 # Porting strategy — prioritize faithful reuse
 
+**Current E016 evidence:** route B additionally has PC profile restart PASS and real reader/parser ARM build/link/VELF conversion PASS. Full native VM execution remains blocked by frontend/OS/audio services, with graphics and device memory untested. [ADR-004](DECISIONS.md) and [native probe](OPENGMK_NATIVE_PROBE.md) define the next bounded original-startup experiment; historical findings below retain their original scope.
+
 PS Vita ARMv7 cannot directly run Windows x86 PE32. Comparison is between **three research paths**, not three ready-made ports.
 
 ## A. Translate original executable x86 -> ARM and implement APIs
