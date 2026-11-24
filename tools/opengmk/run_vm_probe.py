@@ -13,7 +13,7 @@ def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def assess(log,out,interactive,service,operation):
  stop=re.search(r'STARTUP_STOP (\w+): SERVICE_UNAVAILABLE/(\w+)',log)
  response=re.search(r'\[dialog-response\] result=([0-3]) instructions_before=(\d+) instructions_after=(\d+) pending_ms=(\d+)',log)
- instructions=re.search(r'VM_EXECUTION instructions=(\d+)',out)
+ instructions=re.search(r'VM_EXECUTION instructions=(\d+)',out+'\n'+log)
  expected=bool(stop) and (bool(response and response[2]==response[3]) if interactive else stop[2]==service and stop[1]==operation)
  return {'expected_stop':expected and bool(instructions and int(instructions[1])>0),
          'observed_service':stop[2] if stop else None,'observed_operation':stop[1] if stop else None,
@@ -22,7 +22,7 @@ def assess(log,out,interactive,service,operation):
          'dialog_vm_paused':response[2]==response[3] if response else None}
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True);p.add_argument('--input-dir',type=Path,required=True);p.add_argument('--run-name',required=True)
- p.add_argument('--experiment',default='vm-probe-20261123');p.add_argument('--expected-service',default='External');p.add_argument('--expected-operation',default='external_define');p.add_argument('--interactive-dialog',action='store_true');a=p.parse_args()
+ p.add_argument('--experiment',default='vm-probe-20261123');p.add_argument('--expected-service',default='External');p.add_argument('--expected-operation',default='external_define');p.add_argument('--interactive-dialog',action='store_true');p.add_argument('--require-persistent',action='store_true');a=p.parse_args()
  root=Path(__file__).resolve().parents[2]
  if not a.run_name.replace('-','').isalnum() or not a.experiment.replace('-','').isalnum():p.error('use a simple unique run-name')
  runtime=a.runtime.resolve();source=a.input_dir.resolve();game=root/'recovered'/a.experiment/a.run_name;report=root/'reports/local'/a.experiment/a.run_name
@@ -48,5 +48,11 @@ def main():
  summary.update(assessment)
  summary['expected_stop_pass']=result.returncode==2 and assessment['expected_stop'] and summary['copied_exe_unchanged']
  summary['expected_service']=None if a.interactive_dialog else a.expected_service;summary['human_dialog']=a.interactive_dialog
+ if a.require_persistent:
+  logs=list((game/'diagnostics').glob('e019-*/run.log'))
+  saved=logs[0].read_text(encoding='utf-8') if len(logs)==1 else ''
+  persisted=assess(saved,'',a.interactive_dialog,a.expected_service,a.expected_operation)
+  summary['persistent_pass']=persisted==assessment and '[data-verify]' in saved and 'pass=true' in saved and 'PREPARED scripts=' in saved and 'DIAGNOSTIC_END exit_code=2' in saved
+  summary['expected_stop_pass']=summary['expected_stop_pass'] and summary['persistent_pass']
  (report/'result.json').write_text(json.dumps(summary,indent=2), encoding="utf-8");print(json.dumps(summary,indent=2));print((report/'stdout.txt').read_text(encoding="utf-8"));print((report/'stderr.txt').read_text(encoding="utf-8"));raise SystemExit(0 if summary['expected_stop_pass'] else 1)
 if __name__=='__main__':main()
