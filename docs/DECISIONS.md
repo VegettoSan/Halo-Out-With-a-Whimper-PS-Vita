@@ -67,3 +67,15 @@
 **Memory:** 83.2 MiB original payload and 80 MiB candidate sprite/background atlas capacity establish a concrete peak-allocation risk, not Vita RAM consumption or a failed fit test. Measure allocation lifetime and device headroom before asset changes. No performance estimate or phase completion is justified.
 
 **Next gate:** compile the unchanged scripts/events and execute original startup through explicit native host services to the actual modal request, capturing first unsupported call/heap peak; then attach useful native graphics/input/audio. [Evidence, reproducible commands and staged prototype plan](OPENGMK_NATIVE_PROBE.md). A/C remain alternatives without new execution evidence. No functional VPK exists.
+
+## ADR-005 — 2026-11-24 UTC: original compiler/VM builds for Vita; service boundary is explicit
+
+**Status:** accepted bounded technical result; no device compatibility or final graphics/audio architecture selected.
+
+**VERIFIED E017:** upstream compiler/action/event/collision code is reused (22/22 preservation checks); the same headless core compiles/links for ARMv7 and converts to VELF. On PC it compiles 181 scripts / 845 event trees and executes four original startup instructions, stopping at CleanMem.dll's first external binding request. No invented DLL result or skipped call; the initial dialog is not reached. Default desktop library compilation passes; E015's already adapted runner remains untouched.
+
+**Decision:** continue route B using existing VM plus typed platform boundaries. Keep deferred CPU textures/encoded media distinct from unavailable GPU/audio operations, and explicitly reject missing services. No backend may report false upload/playback success. The first native integration obligation is the helper's actual external contract, before a modal/dialog implementation can be exercised. Retain existing INI/dialog compatibility patches for later integration; the inspection provider is not a full game frontend.
+
+**Limits:** ARM execution, native filesystem/save behavior, module initialization, window/control presentation, renderer/audio output and device memory/frame pacing remain untested. Retained network/std imports are real link obligations, not measured usage. Host Rust heap peak (~103.1 MiB) is not Vita consumption. No phase exit, VPK/title ID or public game distribution is justified by this result.
+
+**Next gate:** establish and implement honest native CleanMem service semantics, rerun unchanged startup to its next real request, and only then attach useful graphics/input/audio and test on hardware. [Evidence and reproducible code](OPENGMK_VM_PROBE.md).

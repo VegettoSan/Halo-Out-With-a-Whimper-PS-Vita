@@ -1,5 +1,7 @@
 # E016 — persistence and first native ARM feasibility probe
 
+**E017 follow-up:** [The actual compiler/VM now also build/link for ARM](OPENGMK_VM_PROBE.md); original startup executes on PC until CleanMem external binding is explicitly blocked. This supersedes E016's compiler/VM build absence, retaining its historical failures. ARM execution remains untested.
+
 **2026-11-23 local / 2026-11-24 UTC.** VERIFIED: profile persistence on PC; real OpenGMK reader/parser compilation and ELF → VELF conversion for Vita. **Full interpreter/game execution on ARM is BLOCKED**, not demonstrated. No functional VPK exists and none was generated. Base `main` was `3925148`; the remote main hash matched before changes.
 
 ## PC persistence and audio

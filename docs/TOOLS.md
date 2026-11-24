@@ -1,5 +1,7 @@
 # Tooling checklist (prefer existing local tools)
 
+**E017 reuse:** existing private Windows Rust/Cargo 1.100.0 and WSL hard-float SDK reused entirely offline, without downloads/installations. New headless preparer, service/heap instrumentation, original-data runner and source-reuse auditor are under tools/opengmk/. Both real VM ARM build/VELF conversion and desktop library check pass. See [VM probe](OPENGMK_VM_PROBE.md) for exact commands and remaining native import obligations.
+
 ## E016 inventory update — 2026-11-24 UTC
 
 VERIFIED existing WSL hard-float VitaSDK: GCC 15.2.0, SDK build 2026-05-24, newlib `fbb8375870d799758e0b4358d2f1708781aa26a6`, vita-toolchain `71f3789342f610a4eb3ba50fc33292c4900c6666`; SDL2/vitaGL already present in WSL soft/hard-float SDKs. Windows SDK remains soft-float and cannot link the hard-float Rust objects. Existing private Rust/Cargo 1.100.0 reused; missing rust-src/std build dependencies and target num_threads/x11-clipboard/xcb fetched. cargo-vita absent from checked paths, unnecessary for direct Cargo ELF research. Stable plus process-local RUSTC_BOOTSTRAP enables the bounded build-std test; recommended upstream nightly workflow remains separate.

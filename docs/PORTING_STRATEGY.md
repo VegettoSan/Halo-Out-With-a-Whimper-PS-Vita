@@ -1,5 +1,7 @@
 # Porting strategy — prioritize faithful reuse
 
+**E017 evidence:** route B now builds the existing compiler/VM for Vita ARM and executes original startup on PC until an explicit CleanMem external-service block. This supports incremental native services without replacing GML/VM. It does not establish ARM execution or a native frontend; [ADR-005](DECISIONS.md) and [VM probe](OPENGMK_VM_PROBE.md) set the next gate.
+
 **Current E016 evidence:** route B additionally has PC profile restart PASS and real reader/parser ARM build/link/VELF conversion PASS. Full native VM execution remains blocked by frontend/OS/audio services, with graphics and device memory untested. [ADR-004](DECISIONS.md) and [native probe](OPENGMK_NATIVE_PROBE.md) define the next bounded original-startup experiment; historical findings below retain their original scope.
 
 PS Vita ARMv7 cannot directly run Windows x86 PE32. Comparison is between **three research paths**, not three ready-made ports.
