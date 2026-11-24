@@ -28,7 +28,7 @@
 1. Read existing repo and inventory local tools before downloading or installing anything. Internet only when resolving a specific missing fact, dependency or incompatibility.
 2. For each major hypothesis, choose a small, low-cost experiment with clear PASS/FAIL criteria; stop repeating the same failed action without new evidence.
 3. Prefer static PE analysis first. Before running unknown downloaded tools or legacy game binaries, evaluate trust and use an isolated environment if appropriate.
-4. Make minimal reversible patches with focused commits. Do not bulk delete older builds, backups, originals or unrelated work.
+4. Make minimal reversible patches with focused commits. Do not bulk delete older builds, backups, originals or unrelated work. Work directly on `main`; do not create branches unless the owner explicitly requests one.
 5. Do not build a new VPK unless a concrete executable prototype and diagnostic goal justify a device test.
 6. Avoid multiple repetitive build cycles and token-heavy exploratory rewriting. Summarize findings concisely and reuse documented evidence.
 7. Advance technical phases only when evidence satisfies docs/ROADMAP.md; the owner explicitly approves publication, licensing, destructive actions and scope changes.
