@@ -1,5 +1,7 @@
 # Porting strategy — prioritize faithful reuse
 
+**E020 evidence:** [Route B now has useful native graphics](OPENGMK_GRAPHICS_PROBE.md): original engine-loaded logo displayed on Vita 1000 through libvita2d/GXM with scale/rotation/alpha and measured batching, without vitaGL. Select this as the provisional initial backend, retaining direct GXM for verified gaps. Original VM still stops honestly at Process before menu events. No mechanics/assets rewritten; no full-game fit/performance claim. A/C remain alternatives, with no new evidence favoring them.
+
 **E019 evidence:** route B now has physical Vita 1000 execution of unchanged original data through the existing compiler/VM: 11 instructions to Dialog, 15 under the owner-selected High diagnostic policy to Process. This establishes a native logic prefix, not renderer/audio/input parity or a playable port. Continue explicit native services, preserving original logic; [E019](OPENGMK_PRIORITY_PROBE.md).
 
 **E018 evidence:** route B preserves original startup through a real PC dialog and owner choice, then stops at an explicit Process service. CleanMem's Windows effects are measured; Vita exposes defined failure for unsupported working-set operations rather than fake success. Updated ARM ELF/VELF passes, execution remains untested. Continue bounded services/diagnostics before graphics or packaging; [ADR-006](DECISIONS.md), [E018](OPENGMK_CLEANMEM_PROBE.md).

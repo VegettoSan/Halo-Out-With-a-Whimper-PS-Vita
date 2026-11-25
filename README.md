@@ -1,6 +1,6 @@
 # Halo: Out With a Whimper — PS Vita (research port)
 
-> **P1 / P2 native research.** E019 executes original startup GML on a physical Vita 1000: verified EXE, 181 scripts / 845 events compiled, 15 VM instructions with the owner's High diagnostic policy, then explicit priority-service stop. Windows priority passes real OS readback; PC startup reaches `file_exists`. Owner-ID HOWAW1178 private diagnostic VPK exists and ran; native rendering/input/audio and full gameplay remain unimplemented. No playable Vita game VPK or final backend is verified.
+> **P1 / P2 native research.** E020 renders the authentic engine-loaded game logo on a physical Vita 1000 through an initial libvita2d/GXM backend, including scale, rotation, transparency and batching. Original startup still stops after 15 VM instructions at the priority service; the visual test preserves that error. One 16 MiB texture page is uploaded once; memory and diagnostic frame times are recorded. HOWAW1178 private diagnostic ran; native input/audio, original menu and gameplay remain unimplemented. No playable Vita game VPK exists.
 
 This repository documents research toward a native PlayStation Vita adaptation of the Windows *Halo: Out With a Whimper — Firefight Demo*. **Primary goal: reuse the original executable/data/game logic wherever technically possible, not recreate the game from scratch.**
 
@@ -43,6 +43,7 @@ See [technical audit](docs/TECHNICAL_AUDIT.md) for evidence and uncertainty.
 - [docs/OPENGMK_VM_PROBE.md](docs/OPENGMK_VM_PROBE.md): E017 original compiler/VM, explicit native service boundaries and reproducible startup test.
 - [docs/OPENGMK_CLEANMEM_PROBE.md](docs/OPENGMK_CLEANMEM_PROBE.md): E018 audited helper contract, real human dialog, PC/ARM evidence and next native-service gate.
 - [docs/OPENGMK_PRIORITY_PROBE.md](docs/OPENGMK_PRIORITY_PROBE.md): E019 process/thread priority, persistent diagnostics and first physical Vita VM execution.
+- [docs/OPENGMK_GRAPHICS_PROBE.md](docs/OPENGMK_GRAPHICS_PROBE.md): E020 native renderer, authentic-resource hardware test, memory/batching measurements and original-menu integration gates.
 - [docs/ASSET_POLICY.md](docs/ASSET_POLICY.md): files never to upload.
 - [config/port_identity.json](config/port_identity.json): title ID unassigned.
 

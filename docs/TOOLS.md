@@ -1,5 +1,7 @@
 # Tooling checklist (prefer existing local tools)
 
+**E020 reuse/device graphics proof:** existing hard-float `libvita2d.a` and VitaSDK GXM/display/AppMgr/CommonDialog stubs, no vitaGL or downloads. Narrow C bridge compiled with GCC 15.2.0 `-Werror`; Rust uses local copied archives because its Windows bundler cannot see WSL-only paths. `prepare_graphics_native.py` records exact commands/hashes; `prepare_graphics_probe.py` attaches the backend to E019 in a fresh copy. Host/ARM/desktop/reuse checks pass; authentic-resource GPU/readback/display and memory/timing measured on Vita 1000. [Audit, archive identities, failures and reproduction](OPENGMK_GRAPHICS_PROBE.md).
+
 **E019 reuse/device proof:** same offline toolchain; priority adapter, persistent diagnostic, optional owner High policy and ID-gated private packager added. Both revisions ran the original VM prefix on physical Vita 1000; FTP upload/retrieval and installed SELF hashes verified. No game/binary distribution in Git. [Commands, memory observations and remaining services](OPENGMK_PRIORITY_PROBE.md).
 
 **E018 reuse:** same offline Rust/MSVC/WSL SDK; existing GNU objdump 2.46 used for complete helper inspection. `prepare_cleanmem_probe.py` reuses E017 plus E015 modal/INI patches in fresh copies; the hash-checked differential test, portable adapter and real human-dialog provider are under tools/opengmk/. PC, desktop check, ARM link and VELF conversion passed first attempts; no new crate/tool/install. [Exact commands and limits](OPENGMK_CLEANMEM_PROBE.md).
