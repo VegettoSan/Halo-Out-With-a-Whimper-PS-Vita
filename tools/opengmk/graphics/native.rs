@@ -10,6 +10,7 @@ mod ffi {
         pub fn howaw_graphics_init()->i32;
         pub fn howaw_depth_contract(result:*mut u32)->i32;
         pub fn howaw_depth_fini();
+        pub fn howaw_viewport(x:f32,y:f32,w:f32,h:f32);
         pub fn howaw_gxm_error()->i32;
         pub fn howaw_gxm_error_api()->i32;
         pub fn howaw_gxm_draw_calls()->u32;
@@ -72,7 +73,7 @@ impl Device {
         #[cfg(not(target_os="vita"))] {let _=(p,src,xywh,stride);panic!("{}",unavailable());}
     }
     pub fn begin(&self,colour:u32)->Result<(),String> {
-        #[cfg(target_os="vita")] unsafe {ffi::vita2d_start_drawing();self.check()?;ffi::vita2d_set_clear_color(colour);ffi::vita2d_clear_screen();self.check()}
+        #[cfg(target_os="vita")] unsafe {ffi::vita2d_start_drawing();self.check()?;ffi::howaw_viewport(0.,0.,960.,544.);ffi::vita2d_set_clear_color(colour);ffi::vita2d_clear_screen();self.check()}
         #[cfg(not(target_os="vita"))] {let _=colour;Err(unavailable())}
     }
     pub fn draw(&self,p:*mut c_void,v:&[Vertex],col:u32)->Result<(),String> {
@@ -97,6 +98,10 @@ impl Device {
         #[cfg(target_os="vita")] unsafe {ffi::vita2d_set_blend_mode_add(i32::from(add));self.check()}
         #[cfg(not(target_os="vita"))] {let _=add;Err(unavailable())}
     }
+    pub fn viewport(&self,x:f32,y:f32,w:f32,h:f32)->Result<(),String> {
+        #[cfg(target_os="vita")] unsafe {ffi::howaw_viewport(x,y,w,h);self.check()}
+        #[cfg(not(target_os="vita"))] {let _=(x,y,w,h);Err(unavailable())}
+    }
     pub fn wait(&self) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_wait_rendering_done();}}
     pub fn end_without_present(&self)->Result<(),String> {
         #[cfg(target_os="vita")] unsafe {ffi::vita2d_end_drawing();self.check()}
@@ -107,13 +112,19 @@ impl Device {
 impl Drop for Device {fn drop(&mut self) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_wait_rendering_done();ffi::howaw_depth_fini();ffi::vita2d_fini();}}}
 
 pub fn readback(clear:u32)->Result<(),String> {
+    capture(clear,true)
+}
+/// Frame zero may legitimately be black (the original fade). Record actual
+/// pixels without promoting an empty image into evidence of a visible menu.
+pub fn inspect_original_frame()->Result<(),String> {capture(0xff000000,false)}
+fn capture(clear:u32,require_change:bool)->Result<(),String> {
     #[cfg(target_os="vita")] unsafe {
         let p=ffi::vita2d_get_current_fb();
         if p.is_null(){return Err("framebuffer pointer unavailable".into());}
         let bytes=std::slice::from_raw_parts(p,960*544*4);
         let changed=bytes.chunks_exact(4).filter(|p|u32::from_le_bytes([p[0],p[1],p[2],p[3]])&0xffffff!=clear&0xffffff).count();
         crate::diagnostic!("[gpu-readback] rgba_bytes={} changed_rgb_pixels={} sha256={} gxm_draw_calls={}; display observation separate",bytes.len(),changed,crate::probe_sha256::digest(bytes),ffi::howaw_gxm_draw_calls());
-        if changed==0 {return Err("GPU readback contains only clear colour".into());} Ok(())
+        if changed==0 && require_change {return Err("GPU readback contains only clear colour".into());} Ok(())
     }
-    #[cfg(not(target_os="vita"))] {let _=clear;Err(unavailable())}
+    #[cfg(not(target_os="vita"))] {let _=(clear,require_change);Err(unavailable())}
 }

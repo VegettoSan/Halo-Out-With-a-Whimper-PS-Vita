@@ -6,6 +6,18 @@ from prepare_vm_probe import close
 
 def extend_draw(root):
     src=root/'gm8emulator/src'
+    # Ramen documents this as a void asynchronous request that the OS may ignore;
+    # its Windows implementation discards SetWindowTextW's return. Keep requested
+    # caption state, explicitly report absent titlebar; do not claim an OS change.
+    p=src/'host.rs';s=p.read_text(encoding='utf-8')
+    s=s.replace('pub struct Window;','pub struct Window {caption:std::cell::RefCell<String>}')
+    s=s.replace('pub fn deferred() -> Self { Self }','pub fn deferred() -> Self { Self {caption:std::cell::RefCell::new(String::new())} }')
+    s=s.replace('pub fn set_title(&self, _title: &str) { unavailable(Service::Window,"set_title") }','''pub fn set_title(&self,title:&str) {
+        #[cfg(feature="vita2d")] {self.caption.replace(title.into());crate::diagnostic!("[window-caption] requested_bytes={} stored=true native_titlebar=Unavailable os_title_changed=false",title.len());}
+        #[cfg(not(feature="vita2d"))] {let _=title;unavailable(Service::Window,"set_title")}
+    }
+    pub fn requested_title(&self)->String {self.caption.borrow().clone()}''')
+    p.write_text(s,encoding='utf-8')
     # Static original menu Draw requires these functions. Preserve original
     # conversion, state updates, glyph rendering and call ordering.
     p=src/'gml/kernel.rs';s=p.read_text(encoding='utf-8')
@@ -78,6 +90,33 @@ fn main() {
 }
 ''',encoding='utf-8')
     p=root/'gm8emulator/Cargo.toml';p.write_text(p.read_text(encoding='utf-8')+'\n[[bin]]\nname="mp3-scan-contract"\npath="src/bin/mp3_scan_contract.rs"\nrequired-features=["vita2d"]\n',encoding='utf-8')
+    # Present only after original Game::init has returned Ok. No forced Draw,
+    # synthesized input, animation/frame skipping or continuation after an error.
+    p=src/'bin/vm_probe.rs';s=p.read_text(encoding='utf-8');marker='    let (steps,calls)=host::counts();diagnostic!("VM_EXECUTION'
+    at=s.index(marker)
+    s=s[:at]+'''    #[cfg(target_os="vita")] if result.is_ok() {
+        diagnostic!("ORIGINAL_INIT_COMPLETED; presenting its original frame zero; no gameplay frame/input claimed");
+        let start=std::time::Instant::now();
+        game.renderer.present(game.window_inner_size.0,game.window_inner_size.1,game.scaling);
+        diagnostic!("[original-present] frames=1 logical={}x{} scaling={:?} wait_inclusive_us={}",game.window_inner_size.0,game.window_inner_size.1,game.scaling,start.elapsed().as_micros());
+        gm8emulator::render::vita2d::inspect_original_frame()?;
+        game.renderer.graphics_metrics("original_frame_zero");heap_meter::snapshot("original_frame_zero");diagnostics::native_memory("original_frame_zero");
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        diagnostic!("[next-original-step] process_window_events before Game::frame; unimplemented input must stop");
+        game.process_window_events();
+    }
+'''+s[at:];p.write_text(s,encoding='utf-8')
+    p=src/'bin/caption_contract.rs';p.write_text('''use gm8emulator::host::{Window,Request,Service};
+fn main() {
+    let w=Window::deferred();assert_eq!(w.requested_title(),"");
+    w.set_title("original caption");assert_eq!(w.requested_title(),"original caption");
+    w.set_title("");assert_eq!(w.requested_title(),"");
+    let error=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||w.set_size((640,325)))).expect_err("size must remain unavailable");
+    let r=error.downcast_ref::<Request>().expect("wrong failure");assert!(matches!(r.service,Service::Window));assert_eq!(r.operation,"set_size");
+    println!("CAPTION_CONTRACT_PASS request retained/replaced, no OS titlebar effect claimed; size remains unavailable");
+}
+''',encoding='utf-8')
+    p=root/'gm8emulator/Cargo.toml';p.write_text(p.read_text(encoding='utf-8')+'\n[[bin]]\nname="caption-contract"\npath="src/bin/caption_contract.rs"\nrequired-features=["vita2d"]\n',encoding='utf-8')
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--udon-source',type=Path,required=True);a=p.parse_args()

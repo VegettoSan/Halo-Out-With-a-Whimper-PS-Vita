@@ -11,14 +11,14 @@ pub struct Vita2d {
     entries:Vec<Entry>, pages:Vec<Page>, device:Option<native::Device>,
     vertices:Vec<Vertex>, key:Option<(usize,u32)>, in_scene:bool,
     draws:u64, sprites:u64, uploads:u64, frames:u64, released:usize,
-    view_scale:f64, view_offset:[f64;2], colors:Vec<geometry::ColorVertex>, add:bool, rectangles:u64,
+    view_scale:f64, view_y_scale:f64, view_offset:[f64;2], colors:Vec<geometry::ColorVertex>, add:bool, rectangles:u64, logical:[u32;2],
 }
 impl Vita2d {
     pub fn from_atlases(atl:atlas::AtlasBuilder)->Self {
         let (packers,textures)=atl.into_inner();
         let pages=packers.iter().map(|p|{let (w,h)=p.size();Page{w,h,texture:std::ptr::null_mut(),mapped:0}}).collect();
         let this=Self {entries:textures.into_iter().map(|(rect,pixels)|Entry{rect,pixels:Some(pixels)}).collect(),pages,
-            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,view_scale:1.,view_offset:[0.,0.],colors:Vec::with_capacity(1536),add:false,rectangles:0};
+            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,view_scale:1.,view_y_scale:1.,view_offset:[0.,0.],colors:Vec::with_capacity(1536),add:false,rectangles:0,logical:[960,544]};
         this.metrics("prepared");this
     }
     pub fn metrics(&self,stage:&str) {
@@ -110,7 +110,7 @@ impl RendererTrait for Vita2d {
         if !self.in_scene {panic!("GRAPHICS_FAIL rectangle outside scene");}
         if !self.vertices.is_empty() || self.colors.len()+6>1536 {Self::checked(self.flush());}
         let mut v=geometry::rectangle(x1,y1,x2,y2,[c1,c2,c3,c4],alpha);
-        for v in &mut v {v.x=(f64::from(v.x)*self.view_scale+self.view_offset[0]) as f32;v.y=(f64::from(v.y)*self.view_scale+self.view_offset[1]) as f32;}
+        for v in &mut v {v.x=(f64::from(v.x)*self.view_scale+self.view_offset[0]) as f32;v.y=(f64::from(v.y)*self.view_y_scale+self.view_offset[1]) as f32;}
         self.colors.extend_from_slice(&v);self.rectangles+=1;
         if self.rectangles<=3 {crate::diagnostic!("[graphics-rectangle] submission={} gradient={} alpha={}",self.rectangles,c1!=c2 || c1!=c3 || c1!=c4,alpha);}
     }
@@ -129,7 +129,7 @@ impl RendererTrait for Vita2d {
         let origin=if use_origin{[r.origin_x as f64,r.origin_y as f64]}else{[0.,0.]};
         let p=&self.pages[page];
         let mut quad=geometry::quad(origin,[part_x,part_y,part_w,part_h],[x,y],[xscale,yscale],angle,[r.x as f64,r.y as f64,p.w as f64,p.h as f64]);
-        for v in &mut quad {v.x=(v.x as f64*self.view_scale+self.view_offset[0]) as f32;v.y=(v.y as f64*self.view_scale+self.view_offset[1]) as f32;}
+        for v in &mut quad {v.x=(v.x as f64*self.view_scale+self.view_offset[0]) as f32;v.y=(v.y as f64*self.view_y_scale+self.view_offset[1]) as f32;}
         self.vertices.extend_from_slice(&quad);self.sprites+=1;
         if self.sprites<=3 {crate::diagnostic!("[graphics-sprite] submission={} atlas_ref={} page={} alpha={}",self.sprites,texture.0,page,alpha);}
     }
@@ -140,7 +140,12 @@ impl RendererTrait for Vita2d {
         }
         Self::checked(self.flush());
         let (scale,offset)=geometry::aspect_view(src_w as u32,src_h as u32);
-        self.view_scale=scale;self.view_offset=offset;
+        // Normalize into libvita2d's fixed shader coordinate domain, then use
+        // a real GXM viewport. Clip-space clipping now bounds tiled backgrounds
+        // to the original view without extra stencil draws or atlas copies.
+        let shader=geometry::shader_view(src_w as u32,src_h as u32);
+        self.view_scale=shader[0];self.view_y_scale=shader[1];self.view_offset=[0.,0.];self.logical=[src_w as u32,src_h as u32];
+        Self::checked(self.device.as_ref().expect("view requires active device").viewport(offset[0] as f32,offset[1] as f32,(src_w as f64*scale) as f32,(src_h as f64*scale) as f32));
         crate::diagnostic!("[graphics-view] logical={}x{} physical=960x544 scale={} offset={},{}; no GPU success implied",src_w,src_h,scale,offset[0],offset[1]);
     }
     fn clear_view(&mut self,colour:Colour,alpha:f64) {
@@ -151,7 +156,9 @@ impl RendererTrait for Vita2d {
     }
     fn flush_queue(&mut self) {Self::checked(self.flush());}
     fn present(&mut self,window_width:u32,window_height:u32,scaling:Scaling) {
-        if window_width!=960 || window_height!=544 || !matches!(scaling,Scaling::Fixed(n) if n==1.) {
+        // Vita's physical display is fixed. The original logical full-frame view
+        // is already aspect-mapped by set_view; accept its unchanged 1x policy.
+        if [window_width,window_height]!=self.logical || !matches!(scaling,Scaling::Fixed(1.)|Scaling::Full|Scaling::Aspect(_)) {
             crate::host::unavailable(crate::host::Service::Graphics,"presentation_scaling");
         }
         Self::checked(self.flush());
@@ -166,3 +173,4 @@ impl Renderer {
     pub fn graphics_metrics(&self,stage:&str) {self.0.as_any().downcast_ref::<Vita2d>().expect("Vita2d renderer").metrics(stage);}
 }
 pub fn readback(clear:u32)->Result<(),String> {native::readback(clear)}
+pub fn inspect_original_frame()->Result<(),String> {native::inspect_original_frame()}

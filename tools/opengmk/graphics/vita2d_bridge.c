@@ -161,6 +161,9 @@ int howaw_graphics_init(void) {
     if (rc!=1 || !vita2d_get_context() || !vita2d_get_shader_patcher() || !vita2d_get_linear_indices()) return -1;
     return 0;
 }
+void howaw_viewport(float x,float y,float w,float h) {
+    sceGxmSetViewport(vita2d_get_context(),x+w/2,w/2,y+h/2,-h/2,0.5f,0.5f);
+}
 void *howaw_texture_create(unsigned int w,unsigned int h,unsigned int *stride,unsigned int *mapped) {
     vita2d_texture *t=vita2d_create_empty_texture(w,h);
     if (!t) return NULL;

@@ -20,6 +20,7 @@ pub fn aspect_view(w:u32,h:u32)->(f64,[f64;2]) {
     let scale=(960.0/w as f64).min(544.0/h as f64);
     (scale,[(960.-w as f64*scale)/2.,(544.-h as f64*scale)/2.])
 }
+pub fn shader_view(w:u32,h:u32)->[f64;2] {assert!(w>0 && h>0);[960./w as f64,544./h as f64]}
 
 pub fn tint(col:i32, alpha:f64)->u32 {
     (col as u32 & 0xffffff) | (((alpha.clamp(0.0,1.0)*255.0) as u32)<<24)
@@ -51,6 +52,17 @@ pub fn copy_bgra(src:&[u8], dst:&mut [u8], width:usize, height:usize, stride:usi
 
 #[cfg(test)] mod tests {
     use super::*;
+    #[test] fn viewport_shader_domain_preserves_mapping_and_clip_bounds() {
+        let (scale,offset)=aspect_view(640,325);let shader=shader_view(640,325);
+        for (x,y) in [(0.,0.),(640.,325.),(123.,57.)] {
+            let screen_x=(x*shader[0]/960.)*(640.*scale)+offset[0];
+            let screen_y=(y*shader[1]/544.)*(325.*scale)+offset[1];
+            assert!((screen_x-(x*scale+offset[0])).abs()<1e-10);
+            assert!((screen_y-(y*scale+offset[1])).abs()<1e-10);
+        }
+        assert_eq!(640.*shader[0],960.);assert_eq!(325.*shader[1],544.);
+        assert!(-1.*shader[1]<0. && 326.*shader[1]>544.);
+    }
     #[test] fn gradient_rectangle_sort_and_fan() {
         let v=rectangle(20.,30.,10.,5.,[1,2,3,4],0.5);
         assert_eq!((v[0].x,v[0].y,v[0].color),(10.,5.,0x7f000001));
