@@ -22,7 +22,7 @@ def assess(log,out,interactive,service,operation):
          'dialog_vm_paused':response[2]==response[3] if response else None}
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True);p.add_argument('--input-dir',type=Path,required=True);p.add_argument('--run-name',required=True)
- p.add_argument('--experiment',default='vm-probe-20261123');p.add_argument('--expected-service',default='External');p.add_argument('--expected-operation',default='external_define');p.add_argument('--interactive-dialog',action='store_true');p.add_argument('--require-persistent',action='store_true');p.add_argument('--owner-dialog-high',action='store_true');p.add_argument('--diagnostic-prefix',choices=['e019','e020'],default='e019');a=p.parse_args()
+ p.add_argument('--experiment',default='vm-probe-20261123');p.add_argument('--expected-service',default='External');p.add_argument('--expected-operation',default='external_define');p.add_argument('--interactive-dialog',action='store_true');p.add_argument('--require-persistent',action='store_true');p.add_argument('--owner-dialog-high',action='store_true');p.add_argument('--diagnostic-prefix',choices=['e019','e020','e021'],default='e019');p.add_argument('--native-priority-contract',action='store_true');p.add_argument('--files-contract',action='store_true');a=p.parse_args()
  if a.interactive_dialog and a.owner_dialog_high:p.error('human interaction and owner default policy are separate modes')
  root=Path(__file__).resolve().parents[2]
  if not a.run_name.replace('-','').isalnum() or not a.experiment.replace('-','').isalnum():p.error('use a simple unique run-name')
@@ -39,6 +39,8 @@ def main():
  start=datetime.now(timezone.utc).isoformat()
  with (report/'stdout.txt').open('xb') as out,(report/'stderr.txt').open('xb') as err:
   command=[str(runtime),str(game/'HOWaW_FirefightDemov1.exe')]+(['--interactive-dialog'] if a.interactive_dialog else [])+(['--owner-dialog-high'] if a.owner_dialog_high else [])
+  if a.native_priority_contract:command.append('--native-priority-contract')
+  if a.files_contract:command.append('--files-contract')
   result=subprocess.Popen(command,cwd=game,env=env,stdout=out,stderr=err,creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
   (report/'process.json').write_text(json.dumps({'pid':result.pid,'utc_start':start,'command':command},indent=2),encoding='utf-8')
   print(f'VM probe PID {result.pid}; human-dialog={a.interactive_dialog}; evidence {a.experiment}/{a.run_name}',flush=True)
@@ -52,6 +54,12 @@ def main():
  if a.owner_dialog_high:
   summary['owner_dialog_policy_pass']='[dialog-policy-response] OWNER_POLICY_HIGH result=3' in log and '[dialog-response]' not in log
   summary['expected_stop_pass']=summary['expected_stop_pass'] and summary['owner_dialog_policy_pass']
+ if a.native_priority_contract:
+  summary['native_priority_contract_pass']='[priority-unavailable]' in log and 'process=Unavailable thread=Unavailable' in log and '[priority-readback]' not in log
+  summary['expected_stop_pass']=summary['expected_stop_pass'] and summary['native_priority_contract_pass']
+ if a.files_contract:
+  summary['files_contract_pass']=bool(re.search(r'FILES_CONTRACT_PASS .* VM instructions unchanged='+str(summary['instructions'])+r'\b',log))
+  summary['expected_stop_pass']=summary['expected_stop_pass'] and summary['files_contract_pass']
  if a.require_persistent:
   logs=list((game/'diagnostics').glob(a.diagnostic_prefix+'-*/run.log'))
   saved=logs[0].read_text(encoding='utf-8') if len(logs)==1 else ''
