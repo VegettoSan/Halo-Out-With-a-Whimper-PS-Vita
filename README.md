@@ -1,6 +1,6 @@
 # Halo: Out With a Whimper — PS Vita (research port)
 
-> **P1 / P2 native research.** E021 advances original startup to **38 VM instructions on PC and physical Vita 1000**, with honest unsupported priority effects and real persistent INI operations, then stops at `Audio/sound_replace`. E020's verified libvita2d/GXM renderer is retained unchanged; its logo test is not repeated. HOWAW1178/00.22 private diagnostic ran and persisted its profile/log. Original menu drawing, native input/audio and gameplay remain blocked. No playable Vita game VPK exists.
+> **P1 / P2 native research.** E022 really decodes/registers the original menu MP3 on PC and physical Vita 1000, then reaches the original `Game::draw`: **76 VM instructions with a new profile / 65 with the existing profile**. The next native stop is `Graphics/clear_zbuf`, before object Draw events or a presented menu. E020 libvita2d/GXM backend reused with a bounded full-view mapping and error cleanup; no repeated logo. HOWAW1178/00.23 private diagnostic verified. Native audio output/input and gameplay remain incomplete; no playable game VPK exists.
 
 This repository documents research toward a native PlayStation Vita adaptation of the Windows *Halo: Out With a Whimper — Firefight Demo*. **Primary goal: reuse the original executable/data/game logic wherever technically possible, not recreate the game from scratch.**
 
@@ -45,6 +45,7 @@ See [technical audit](docs/TECHNICAL_AUDIT.md) for evidence and uncertainty.
 - [docs/OPENGMK_PRIORITY_PROBE.md](docs/OPENGMK_PRIORITY_PROBE.md): E019 process/thread priority, persistent diagnostics and first physical Vita VM execution.
 - [docs/OPENGMK_GRAPHICS_PROBE.md](docs/OPENGMK_GRAPHICS_PROBE.md): E020 native renderer, authentic-resource hardware test, memory/batching measurements and original-menu integration gates.
 - [docs/OPENGMK_STARTUP_SERVICES_PROBE.md](docs/OPENGMK_STARTUP_SERVICES_PROBE.md): E021 verified priority failure contract, persistent PC/Vita INI services and exact Game Start audio gate.
+- [docs/OPENGMK_MP3_PROBE.md](docs/OPENGMK_MP3_PROBE.md): E022 existing-codec reuse, real PC/Vita MP3 replacement, memory/ownership proof and original Draw/depth-clear gate.
 - [docs/ASSET_POLICY.md](docs/ASSET_POLICY.md): files never to upload.
 - [config/port_identity.json](config/port_identity.json): title ID unassigned.
 

@@ -1,5 +1,7 @@
 # E020 — native libvita2d/GXM renderer attached to the existing VM
 
+**E022 follow-up:** [original startup now reaches Game::draw after real MP3 registration](OPENGMK_MP3_PROBE.md). E020 renderer reused with minimal full-view aspect mapping and cleanup for an unpresented scene; original native view 640×325 accepted, then actual clear_zbuf requirement stops before object Draw events. The old logo diagnostic was not repeated. This is not a presented original menu or a new displayed-FPS result.
+
 **2026-11-25 UTC / 2026-11-24 America/Bogota. VERIFIED:** initial libvita2d/GXM backend **renders the authentic engine-loaded game logo on the owner's physical Vita 1000**, including scale, rotation, transparency and batching, without vitaGL. Owner observation, GPU readback, persistent log and installed SELF identity agree. The strict loader, original compiler/VM, collision masks and event trees are retained. **Native startup still stops at `Process/set_program_priority` after 15 instructions; no playable/functional game VPK or original-menu execution is established.** Private diagnostic identity: **HOWAW1178 / 00.21**.
 
 ## What the game requires

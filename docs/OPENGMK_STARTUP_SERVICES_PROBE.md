@@ -1,5 +1,7 @@
 # E021 — original startup through priority and persistent INI services
 
+**E022 follow-up:** [sound_replace now actually decodes/registers the original MP3 on PC/Vita](OPENGMK_MP3_PROBE.md), superseding the current audio-replacement gate below while preserving E021 evidence. Existing profile retained byte-for-byte; original VM reaches Game::draw (65 instructions on that profile). Native stop is clear_zbuf before object Draw/presentation; native audio output is still unavailable, not represented by a fake playing handle.
+
 **2026-11-25 UTC / 2026-11-24 America/Bogota. VERIFIED:** PC and physical Vita 1000 execute **38 original VM instructions / 28 traced service calls**, passing E020's 15-instruction priority gate and the subsequent real file/INI requests. Native execution stops at **`Audio/sound_replace`**, exit **2**. Installed **HOWAW1178 / 00.22** SELF, persisted log and saved INI independently verified. **No original menu frame or playable/functional game VPK exists.** E020's backend and original assets/GML remain unchanged; its logo fixture was removed from this diagnostic.
 
 ## Priority: procedure completion is not scheduler success
