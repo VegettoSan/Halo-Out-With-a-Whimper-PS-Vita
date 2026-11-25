@@ -1,5 +1,7 @@
 # Porting strategy — prioritize faithful reuse
 
+**E021 evidence:** original PC/Vita startup now passes the priority/file/INI gates using verified procedure-failure semantics and actual durable files, reaching **Audio/sound_replace** after 38 instructions. E020 renderer remains byte-identical. The next bounded route-B experiment is native MP3 decode/handle registration with measured memory and correct Deferred ownership before replacement success. Original menu Draw is still blocked; no audio/graphics success is invented to continue. [E021](OPENGMK_STARTUP_SERVICES_PROBE.md).
+
 **E020 evidence:** [Route B now has useful native graphics](OPENGMK_GRAPHICS_PROBE.md): original engine-loaded logo displayed on Vita 1000 through libvita2d/GXM with scale/rotation/alpha and measured batching, without vitaGL. Select this as the provisional initial backend, retaining direct GXM for verified gaps. Original VM still stops honestly at Process before menu events. No mechanics/assets rewritten; no full-game fit/performance claim. A/C remain alternatives, with no new evidence favoring them.
 
 **E019 evidence:** route B now has physical Vita 1000 execution of unchanged original data through the existing compiler/VM: 11 instructions to Dialog, 15 under the owner-selected High diagnostic policy to Process. This establishes a native logic prefix, not renderer/audio/input parity or a playable port. Continue explicit native services, preserving original logic; [E019](OPENGMK_PRIORITY_PROBE.md).

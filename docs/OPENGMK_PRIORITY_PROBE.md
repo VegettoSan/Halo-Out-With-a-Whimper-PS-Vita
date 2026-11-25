@@ -1,5 +1,7 @@
 # E019 — verified priority service and persistent native VM diagnostic
 
+**E021 follow-up:** [Reviewed failure contract and persistent startup services](OPENGMK_STARTUP_SERVICES_PROBE.md) supersede E019's deliberately strict error boundary: the original priority procedure does not test either Windows API result or write a GML status. A hash-checked bounded original-procedure test with real API failures confirms both calls and unchanged result slot. Native completion logs unavailable effects, never scheduler success; original startup advances to sound_replace. E019's earlier runs/artifacts and their Process stop remain historical evidence.
+
 **2026-11-24 UTC (2026-11-23 owner local). VERIFIED:** original PC startup executes **16 instructions**, including real process/thread priority changes, then stops at **`file_exists` / Files**. The same real loader/compiler/VM **ran on the owner's physical Vita 1000**: original EXE hash verified, 181 scripts / 845 events compiled, first **11 original GML instructions** to Dialog, then **15** with the owner's explicitly requested High policy to Process. Owner selected **HOWAW1178** and installed both private diagnostics via VitaShell FTP. **This is native VM-prefix execution, not a playable game VPK.**
 
 ## Contract and PC result
