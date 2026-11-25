@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Build the E020 bridge and copy required SDK archives into NEW ignored output.
+
+Windows rustc must see native archives while using the WSL linker. Toolchains
+are read only; no installation, shader compiler, vitaGL or game data is used.
+"""
+import argparse,hashlib,json,subprocess
+from pathlib import Path
+from datetime import datetime,timezone
+from vita_wsl_link import translate
+
+LIBS=['vita2d','SceGxm_stub','SceDisplay_stub','SceCommonDialog_stub','SceAppMgr_stub','SceSysmodule_stub']
+def main():
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--sdk',default='/usr/local/vitasdk-hardfp');p.add_argument('--distro',default='Ubuntu');a=p.parse_args()
+    root=Path(__file__).resolve().parents[2];out=a.output.resolve()
+    if not out.is_relative_to(root/'build') or out.exists():p.error('NEW ignored build/ output required')
+    out.mkdir(parents=True);commands=[]
+    def run(*args):
+        cmd=['wsl','-d',a.distro,'--exec',*args];commands.append(cmd)
+        return subprocess.check_output(cmd,stderr=subprocess.STDOUT,text=True)
+    source=Path(__file__).with_name('graphics')/'vita2d_bridge.c'
+    version=run(a.sdk+'/bin/arm-vita-eabi-gcc','--version').splitlines()[0]
+    run(a.sdk+'/bin/arm-vita-eabi-gcc','-mfloat-abi=hard','-std=c11','-O2','-Wall','-Wextra','-Werror','-c',translate(str(source.resolve())),'-o',translate(str(out/'vita2d_bridge.o')))
+    run(a.sdk+'/bin/arm-vita-eabi-ar','rcs',translate(str(out/'libhowaw_graphics.a')),translate(str(out/'vita2d_bridge.o')))
+    for lib in LIBS:
+        run('cp',a.sdk+'/arm-vita-eabi/lib/lib'+lib+'.a',translate(str(out/('lib'+lib+'.a'))))
+    hashes={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in out.glob('*.a')}
+    manifest={'utc':datetime.now(timezone.utc).isoformat(),'gcc':version,'source_sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'archives_sha256':hashes,'commands':commands,'result':'PASS compile/archive; device execution UNTESTED'}
+    (out/'native-build.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
+    print('PASS hard-float C bridge (-Werror), required SDK archives copied; set HOWAW_GRAPHICS_LIB_DIR to output')
+if __name__=='__main__':main()

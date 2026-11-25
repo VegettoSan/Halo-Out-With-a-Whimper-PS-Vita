@@ -22,7 +22,7 @@ def assess(log,out,interactive,service,operation):
          'dialog_vm_paused':response[2]==response[3] if response else None}
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True);p.add_argument('--input-dir',type=Path,required=True);p.add_argument('--run-name',required=True)
- p.add_argument('--experiment',default='vm-probe-20261123');p.add_argument('--expected-service',default='External');p.add_argument('--expected-operation',default='external_define');p.add_argument('--interactive-dialog',action='store_true');p.add_argument('--require-persistent',action='store_true');p.add_argument('--owner-dialog-high',action='store_true');a=p.parse_args()
+ p.add_argument('--experiment',default='vm-probe-20261123');p.add_argument('--expected-service',default='External');p.add_argument('--expected-operation',default='external_define');p.add_argument('--interactive-dialog',action='store_true');p.add_argument('--require-persistent',action='store_true');p.add_argument('--owner-dialog-high',action='store_true');p.add_argument('--diagnostic-prefix',choices=['e019','e020'],default='e019');a=p.parse_args()
  if a.interactive_dialog and a.owner_dialog_high:p.error('human interaction and owner default policy are separate modes')
  root=Path(__file__).resolve().parents[2]
  if not a.run_name.replace('-','').isalnum() or not a.experiment.replace('-','').isalnum():p.error('use a simple unique run-name')
@@ -53,7 +53,7 @@ def main():
   summary['owner_dialog_policy_pass']='[dialog-policy-response] OWNER_POLICY_HIGH result=3' in log and '[dialog-response]' not in log
   summary['expected_stop_pass']=summary['expected_stop_pass'] and summary['owner_dialog_policy_pass']
  if a.require_persistent:
-  logs=list((game/'diagnostics').glob('e019-*/run.log'))
+  logs=list((game/'diagnostics').glob(a.diagnostic_prefix+'-*/run.log'))
   saved=logs[0].read_text(encoding='utf-8') if len(logs)==1 else ''
   persisted=assess(saved,'',a.interactive_dialog,a.expected_service,a.expected_operation)
   summary['persistent_pass']=persisted==assessment and '[data-verify]' in saved and 'pass=true' in saved and 'PREPARED scripts=' in saved and 'DIAGNOSTIC_END exit_code=2' in saved
