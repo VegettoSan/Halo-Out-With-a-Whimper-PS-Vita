@@ -17,6 +17,7 @@ mod ffi {
         pub fn vita2d_texture_get_datap(t:*mut c_void)->*mut u8;
         pub fn vita2d_free_texture(t:*mut c_void);
         pub fn vita2d_start_drawing();
+        pub fn vita2d_end_drawing();
         pub fn vita2d_set_clear_color(col:u32);
         pub fn vita2d_clear_screen();
         pub fn vita2d_wait_rendering_done();
@@ -80,6 +81,10 @@ impl Device {
         #[cfg(not(target_os="vita"))] {Err(unavailable())}
     }
     pub fn wait(&self) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_wait_rendering_done();}}
+    pub fn end_without_present(&self)->Result<(),String> {
+        #[cfg(target_os="vita")] unsafe {ffi::vita2d_end_drawing();self.check()}
+        #[cfg(not(target_os="vita"))] {Err(unavailable())}
+    }
     pub fn free(&self,p:*mut c_void) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_free_texture(p);} #[cfg(not(target_os="vita"))] {let _=p;}}
 }
 impl Drop for Device {fn drop(&mut self) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_fini();}}}

@@ -11,13 +11,14 @@ pub struct Vita2d {
     entries:Vec<Entry>, pages:Vec<Page>, device:Option<native::Device>,
     vertices:Vec<Vertex>, key:Option<(usize,u32)>, in_scene:bool,
     draws:u64, sprites:u64, uploads:u64, frames:u64, released:usize,
+    view_scale:f64, view_offset:[f64;2],
 }
 impl Vita2d {
     pub fn from_atlases(atl:atlas::AtlasBuilder)->Self {
         let (packers,textures)=atl.into_inner();
         let pages=packers.iter().map(|p|{let (w,h)=p.size();Page{w,h,texture:std::ptr::null_mut(),mapped:0}}).collect();
         let this=Self {entries:textures.into_iter().map(|(rect,pixels)|Entry{rect,pixels:Some(pixels)}).collect(),pages,
-            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0};
+            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,view_scale:1.,view_offset:[0.,0.]};
         this.metrics("prepared");this
     }
     pub fn metrics(&self,stage:&str) {
@@ -67,7 +68,10 @@ impl Vita2d {
 }
 impl Drop for Vita2d {
     fn drop(&mut self) {
-        if let Some(d)=self.device.as_ref(){d.wait();for p in &self.pages {if !p.texture.is_null(){d.free(p.texture);}}}
+        if let Some(d)=self.device.as_ref(){
+            if self.in_scene {crate::diagnostic!("[graphics-cleanup] end unpresented scene result={:?}",d.end_without_present());}
+            d.wait();for p in &self.pages {if !p.texture.is_null(){d.free(p.texture);}}
+        }
     }
 }
 
@@ -88,7 +92,19 @@ impl RendererTrait for Vita2d {
         if self.key!=Some(key) || self.vertices.len()+6>1536 {Self::checked(self.flush());self.key=Some(key);}
         let origin=if use_origin{[r.origin_x as f64,r.origin_y as f64]}else{[0.,0.]};
         let p=&self.pages[page];
-        self.vertices.extend_from_slice(&geometry::quad(origin,[part_x,part_y,part_w,part_h],[x,y],[xscale,yscale],angle,[r.x as f64,r.y as f64,p.w as f64,p.h as f64]));self.sprites+=1;
+        let mut quad=geometry::quad(origin,[part_x,part_y,part_w,part_h],[x,y],[xscale,yscale],angle,[r.x as f64,r.y as f64,p.w as f64,p.h as f64]);
+        for v in &mut quad {v.x=(v.x as f64*self.view_scale+self.view_offset[0]) as f32;v.y=(v.y as f64*self.view_scale+self.view_offset[1]) as f32;}
+        self.vertices.extend_from_slice(&quad);self.sprites+=1;
+    }
+    fn set_view(&mut self,src_x:i32,src_y:i32,src_w:i32,src_h:i32,src_angle:f64,port_x:i32,port_y:i32,port_w:i32,port_h:i32) {
+        // First original menu: one full-frame axis-aligned view. Other views stay explicit.
+        if src_x!=0 || src_y!=0 || port_x!=0 || port_y!=0 || src_angle!=0. || src_w!=port_w || src_h!=port_h || src_w<=0 || src_h<=0 {
+            crate::host::unavailable(crate::host::Service::Graphics,"subview_or_rotated_view");
+        }
+        Self::checked(self.flush());
+        let (scale,offset)=geometry::aspect_view(src_w as u32,src_h as u32);
+        self.view_scale=scale;self.view_offset=offset;
+        crate::diagnostic!("[graphics-view] logical={}x{} physical=960x544 scale={} offset={},{}; no GPU success implied",src_w,src_h,scale,offset[0],offset[1]);
     }
     fn clear_view(&mut self,colour:Colour,alpha:f64) {
         if self.in_scene {crate::host::unavailable(crate::host::Service::Graphics,"clear_inside_scene");}

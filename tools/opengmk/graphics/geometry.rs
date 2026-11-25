@@ -3,6 +3,12 @@
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Vertex { pub x:f32, pub y:f32, pub z:f32, pub u:f32, pub v:f32 }
 
+pub fn aspect_view(w:u32,h:u32)->(f64,[f64;2]) {
+    assert!(w>0 && h>0);
+    let scale=(960.0/w as f64).min(544.0/h as f64);
+    (scale,[(960.-w as f64*scale)/2.,(544.-h as f64*scale)/2.])
+}
+
 pub fn tint(col:i32, alpha:f64)->u32 {
     (col as u32 & 0xffffff) | (((alpha.clamp(0.0,1.0)*255.0) as u32)<<24)
 }
@@ -33,6 +39,11 @@ pub fn copy_bgra(src:&[u8], dst:&mut [u8], width:usize, height:usize, stride:usi
 
 #[cfg(test)] mod tests {
     use super::*;
+    #[test] fn original_menu_view_fits_display() {
+        let (scale,offset)=aspect_view(640,325);
+        assert_eq!(scale,1.5);assert_eq!(offset,[0.,28.25]);
+        assert_eq!(aspect_view(960,544),(1.,[0.,0.]));
+    }
     #[test] fn crop_origin_rotation_and_mirror() {
         let v=quad([0.5,0.5],[2.,3.,10.,20.],[100.,100.],[-2.,1.],90.,[32.,64.,256.,256.]);
         assert!((v[0].x-89.5).abs()<0.001 && (v[0].y-90.5).abs()<0.001);
