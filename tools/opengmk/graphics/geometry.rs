@@ -2,6 +2,18 @@
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Vertex { pub x:f32, pub y:f32, pub z:f32, pub u:f32, pub v:f32 }
+#[repr(C)]
+#[derive(Clone,Copy,Debug,Default)]
+pub struct ColorVertex {pub x:f32,pub y:f32,pub z:f32,pub color:u32}
+
+pub fn rectangle(x1:f64,y1:f64,x2:f64,y2:f64,colors:[i32;4],alpha:f64)->[ColorVertex;6] {
+    let (left,right)=(x1.min(x2),x1.max(x2));let (top,bottom)=(y1.min(y2),y1.max(y2));
+    let right=if right==right.floor(){right+0.01}else{right};
+    let bottom=if bottom==bottom.floor(){bottom+0.01}else{bottom};
+    let v=[(left,top),(right,top),(right,bottom),(left,bottom)].map(|(x,y)|ColorVertex{x:x as f32,y:y as f32,z:0.5,color:0});
+    let v=std::array::from_fn::<_,4,_>(|i|ColorVertex{color:tint(colors[i],alpha),..v[i]});
+    [v[0],v[1],v[2],v[0],v[2],v[3]]
+}
 
 pub fn aspect_view(w:u32,h:u32)->(f64,[f64;2]) {
     assert!(w>0 && h>0);
@@ -39,6 +51,12 @@ pub fn copy_bgra(src:&[u8], dst:&mut [u8], width:usize, height:usize, stride:usi
 
 #[cfg(test)] mod tests {
     use super::*;
+    #[test] fn gradient_rectangle_sort_and_fan() {
+        let v=rectangle(20.,30.,10.,5.,[1,2,3,4],0.5);
+        assert_eq!((v[0].x,v[0].y,v[0].color),(10.,5.,0x7f000001));
+        assert_eq!((v[2].x,v[2].y,v[2].color),(20.01,30.01,0x7f000003));
+        assert_eq!((v[3].color,v[4].color,v[5].color),(v[0].color,v[2].color,0x7f000004));
+    }
     #[test] fn original_menu_view_fits_display() {
         let (scale,offset)=aspect_view(640,325);
         assert_eq!(scale,1.5);assert_eq!(offset,[0.,28.25]);

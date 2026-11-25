@@ -11,21 +11,21 @@ pub struct Vita2d {
     entries:Vec<Entry>, pages:Vec<Page>, device:Option<native::Device>,
     vertices:Vec<Vertex>, key:Option<(usize,u32)>, in_scene:bool,
     draws:u64, sprites:u64, uploads:u64, frames:u64, released:usize,
-    view_scale:f64, view_offset:[f64;2],
+    view_scale:f64, view_offset:[f64;2], colors:Vec<geometry::ColorVertex>, add:bool, rectangles:u64,
 }
 impl Vita2d {
     pub fn from_atlases(atl:atlas::AtlasBuilder)->Self {
         let (packers,textures)=atl.into_inner();
         let pages=packers.iter().map(|p|{let (w,h)=p.size();Page{w,h,texture:std::ptr::null_mut(),mapped:0}}).collect();
         let this=Self {entries:textures.into_iter().map(|(rect,pixels)|Entry{rect,pixels:Some(pixels)}).collect(),pages,
-            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,view_scale:1.,view_offset:[0.,0.]};
+            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,view_scale:1.,view_offset:[0.,0.],colors:Vec::with_capacity(1536),add:false,rectangles:0};
         this.metrics("prepared");this
     }
     pub fn metrics(&self,stage:&str) {
         let pending:usize=self.entries.iter().filter_map(|e|e.pixels.as_ref()).map(|p|p.len()).sum();
         let mapped:usize=self.pages.iter().map(|p|p.mapped).sum();
-        crate::diagnostic!("[graphics-memory] stage={} entries={} pages={} cpu_pending_bytes={} cpu_released_bytes={} gpu_texture_mapped_bytes={} page_uploads={} sprite_submissions={} batch_draws={} frames={}",
-            stage,self.entries.len(),self.pages.len(),pending,self.released,mapped,self.uploads,self.sprites,self.draws,self.frames);
+        crate::diagnostic!("[graphics-memory] stage={} entries={} pages={} cpu_pending_bytes={} cpu_released_bytes={} gpu_texture_mapped_bytes={} page_uploads={} sprite_submissions={} rectangle_submissions={} queued_texture_vertices={} queued_color_vertices={} batch_draws={} frames={}",
+            stage,self.entries.len(),self.pages.len(),pending,self.released,mapped,self.uploads,self.sprites,self.rectangles,self.vertices.len(),self.colors.len(),self.draws,self.frames);
     }
     pub fn resource(&self,id:AtlasRef)->Result<(),String> {
         let e=self.entries.get(usize::try_from(id.0).map_err(|_|"invalid texture id")?).ok_or("texture id absent")?;
@@ -39,6 +39,10 @@ impl Vita2d {
         if self.device.is_none(){self.device=Some(native::Device::new()?);crate::diagnostics::native_memory("gxm_initialized");}
         // Keep all CPU payloads until allocation and validation succeed; never upload a page twice.
         let p=&self.pages[page];
+        let allocated:usize=self.pages.iter().map(|p|p.mapped).sum();
+        // Four demand-loaded 16 MiB pages; do not attempt all six in CDRAM.
+        // Eviction needs recoverable backing storage, not discarded CPU pixels.
+        if allocated+p.w as usize*p.h as usize*4>64*1024*1024 {return Err("GPU atlas budget exceeded (64 MiB); recoverable eviction not implemented".into());}
         for e in self.entries.iter().filter(|e|e.rect.atlas_id as usize==page) {
             let r=e.rect;
             if r.x<0 || r.y<0 || r.w<=0 || r.h<=0 || r.x+r.w>p.w || r.y+r.h>p.h || e.pixels.as_ref().map(|x|x.len())!=Some(r.w as usize*r.h as usize*4) {
@@ -58,8 +62,12 @@ impl Vita2d {
         self.metrics("page_uploaded");crate::heap_meter::snapshot("page_uploaded");crate::diagnostics::native_memory("page_uploaded");Ok(())
     }
     fn flush(&mut self)->Result<(),String> {
-        if self.vertices.is_empty(){return Ok(());}
+        if self.vertices.is_empty() && self.colors.is_empty(){return Ok(());}
         if !self.in_scene{return Err("draw batch outside scene".into());}
+        if !self.colors.is_empty() {
+            self.device.as_ref().unwrap().colors(&self.colors)?;self.colors.clear();self.draws+=1;
+            return Ok(());
+        }
         let (page,col)=self.key.unwrap();
         self.device.as_ref().unwrap().draw(self.pages[page].texture,&self.vertices,col)?;
         self.draws+=1;self.vertices.clear();Ok(())
@@ -78,7 +86,34 @@ impl Drop for Vita2d {
 impl RendererTrait for Vita2d {
     fn as_any(&self)->&dyn Any {self}
     fn max_texture_size(&self)->u32 {2048}
+    // Same guard as upstream OpenGL: the original 2D menu has no depth clear.
+    // Enabling 3D remains unavailable until its matrices/states are implemented.
+    fn clear_zbuf(&mut self) {crate::diagnostic!("[graphics-depth] clear_zbuf using_3d=false gpu_clear=false (original 2D contract)");}
+    fn get_3d(&self)->bool {false}
+    fn set_3d(&mut self,enabled:bool) {if enabled {crate::host::unavailable(crate::host::Service::Graphics,"set_3d");}}
+    fn get_depth(&self)->f32 {0.}
+    fn set_depth(&mut self,depth:f32) {let _=depth; /* upstream forces zero outside 3D */}
+    fn get_depth_test(&self)->bool {false}
+    fn set_depth_test(&mut self,enabled:bool) {let _=enabled; /* upstream masks with using_3d */}
     fn get_rect(&self,id:AtlasRef)->Option<&AtlasRect> {usize::try_from(id.0).ok().and_then(|i|self.entries.get(i)).map(|e|&e.rect)}
+    fn get_blend_mode(&self)->(BlendType,BlendType) {(BlendType::SrcAlpha,if self.add{BlendType::One}else{BlendType::InvSrcAlpha})}
+    fn set_blend_mode(&mut self,src:BlendType,dst:BlendType) {
+        if src!=BlendType::SrcAlpha || !matches!(dst,BlendType::One|BlendType::InvSrcAlpha) {crate::host::unavailable(crate::host::Service::Graphics,"blend_factors");}
+        Self::checked(self.flush());let add=dst==BlendType::One;
+        if let Some(d)=&self.device {Self::checked(d.blend(add));}
+        self.add=add;crate::diagnostic!("[graphics-blend] src={:?} dst={:?}",src,dst);
+    }
+    fn draw_rectangle(&mut self,x1:f64,y1:f64,x2:f64,y2:f64,colour:i32,alpha:f64) {self.draw_rectangle_gradient(x1,y1,x2,y2,colour,colour,colour,colour,alpha,false);}
+    fn draw_rectangle_gradient(&mut self,x1:f64,y1:f64,x2:f64,y2:f64,c1:i32,c2:i32,c3:i32,c4:i32,alpha:f64,outline:bool) {
+        if outline {crate::host::unavailable(crate::host::Service::Graphics,"rectangle_outline");}
+        if ![x1,y1,x2,y2,alpha].iter().all(|v|v.is_finite()) {panic!("GRAPHICS_FAIL nonfinite rectangle");}
+        if !self.in_scene {panic!("GRAPHICS_FAIL rectangle outside scene");}
+        if !self.vertices.is_empty() || self.colors.len()+6>1536 {Self::checked(self.flush());}
+        let mut v=geometry::rectangle(x1,y1,x2,y2,[c1,c2,c3,c4],alpha);
+        for v in &mut v {v.x=(f64::from(v.x)*self.view_scale+self.view_offset[0]) as f32;v.y=(f64::from(v.y)*self.view_scale+self.view_offset[1]) as f32;}
+        self.colors.extend_from_slice(&v);self.rectangles+=1;
+        if self.rectangles<=3 {crate::diagnostic!("[graphics-rectangle] submission={} gradient={} alpha={}",self.rectangles,c1!=c2 || c1!=c3 || c1!=c4,alpha);}
+    }
     fn draw_sprite_general(&mut self,texture:AtlasRef,part_x:f64,part_y:f64,part_w:f64,part_h:f64,
         x:f64,y:f64,xscale:f64,yscale:f64,angle:f64,col1:i32,col2:i32,col3:i32,col4:i32,alpha:f64,use_origin:bool) {
         if col1!=col2 || col1!=col3 || col1!=col4 {crate::host::unavailable(crate::host::Service::Graphics,"per_vertex_tint");}
@@ -87,6 +122,7 @@ impl RendererTrait for Vita2d {
             crate::host::unavailable(crate::host::Service::Graphics,"sprite_crop_out_of_bounds");
         }
         if !self.in_scene {panic!("GRAPHICS_FAIL draw_sprite without clear_view/begin");}
+        if !self.colors.is_empty() {Self::checked(self.flush());}
         let page=r.atlas_id as usize;Self::checked(self.resident(page));
         let key=(page,geometry::tint(col1,alpha));
         if self.key!=Some(key) || self.vertices.len()+6>1536 {Self::checked(self.flush());self.key=Some(key);}
@@ -95,6 +131,7 @@ impl RendererTrait for Vita2d {
         let mut quad=geometry::quad(origin,[part_x,part_y,part_w,part_h],[x,y],[xscale,yscale],angle,[r.x as f64,r.y as f64,p.w as f64,p.h as f64]);
         for v in &mut quad {v.x=(v.x as f64*self.view_scale+self.view_offset[0]) as f32;v.y=(v.y as f64*self.view_scale+self.view_offset[1]) as f32;}
         self.vertices.extend_from_slice(&quad);self.sprites+=1;
+        if self.sprites<=3 {crate::diagnostic!("[graphics-sprite] submission={} atlas_ref={} page={} alpha={}",self.sprites,texture.0,page,alpha);}
     }
     fn set_view(&mut self,src_x:i32,src_y:i32,src_w:i32,src_h:i32,src_angle:f64,port_x:i32,port_y:i32,port_w:i32,port_h:i32) {
         // First original menu: one full-frame axis-aligned view. Other views stay explicit.
@@ -110,6 +147,7 @@ impl RendererTrait for Vita2d {
         if self.in_scene {crate::host::unavailable(crate::host::Service::Graphics,"clear_inside_scene");}
         if self.device.is_none(){self.device=Some(native::Device::new().unwrap_or_else(|e|panic!("GRAPHICS_FAIL {}",e)));crate::diagnostics::native_memory("gxm_initialized");}
         Self::checked(self.device.as_ref().unwrap().begin(geometry::tint(colour.as_decimal() as i32,alpha)));self.in_scene=true;
+        Self::checked(self.device.as_ref().unwrap().blend(self.add));
     }
     fn flush_queue(&mut self) {Self::checked(self.flush());}
     fn present(&mut self,window_width:u32,window_height:u32,scaling:Scaling) {

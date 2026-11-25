@@ -46,7 +46,7 @@ def extend_graphics(root):
         for lib in ["howaw_graphics","vita2d","SceGxm_stub","SceDisplay_stub","SceCommonDialog_stub","SceAppMgr_stub","SceSysmodule_stub"] {
             println!("cargo:rustc-link-lib=static={lib}");
         }
-        for api in ["sceGxmInitialize","sceGxmBeginScene","sceGxmDraw","sceGxmEndScene","sceGxmDisplayQueueAddEntry","sceDisplaySetFrameBuf","sceGxmTextureInitLinear"] {
+        for api in ["sceGxmInitialize","sceGxmBeginScene","sceGxmDraw","sceGxmEndScene","sceGxmDisplayQueueAddEntry","sceDisplaySetFrameBuf","sceGxmTextureInitLinear","sceGxmShaderPatcherCreateFragmentProgram"] {
             println!("cargo:rustc-link-arg=-Wl,--wrap={api}");
         }
     }

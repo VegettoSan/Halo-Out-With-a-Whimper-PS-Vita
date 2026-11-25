@@ -1,5 +1,5 @@
 //! The host returns an explicit error; it never impersonates a native GPU.
-use super::geometry::Vertex;
+use super::geometry::{Vertex,ColorVertex};
 use std::ffi::c_void;
 pub struct Device;
 
@@ -8,11 +8,15 @@ mod ffi {
     use super::*;
     extern "C" {
         pub fn howaw_graphics_init()->i32;
+        pub fn howaw_depth_contract(result:*mut u32)->i32;
+        pub fn howaw_depth_fini();
         pub fn howaw_gxm_error()->i32;
         pub fn howaw_gxm_error_api()->i32;
         pub fn howaw_gxm_draw_calls()->u32;
         pub fn howaw_texture_create(w:u32,h:u32,stride:*mut u32,mapped:*mut u32)->*mut c_void;
         pub fn howaw_draw_batch(t:*mut c_void,v:*const Vertex,n:u32,col:u32)->i32;
+        pub fn howaw_draw_colors(v:*const ColorVertex,n:u32)->i32;
+        pub fn vita2d_set_blend_mode_add(add:i32);
         pub fn howaw_finish_frame()->i32;
         pub fn vita2d_texture_get_datap(t:*mut c_void)->*mut u8;
         pub fn vita2d_free_texture(t:*mut c_void);
@@ -31,7 +35,12 @@ impl Device {
         #[cfg(target_os="vita")] unsafe {
             let rc=ffi::howaw_graphics_init();
             crate::diagnostic!("[graphics-init] libvita2d/GXM rc={} pool_bytes=262144 msaa=none",rc);
-            if rc!=0 {return Err(format!("graphics init error={rc}"));} Ok(Self)
+            if rc!=0 {return Err(format!("graphics init error={rc}"));}
+            let device=Self;let mut result=[0u32;5];let start=std::time::Instant::now();
+            let rc=ffi::howaw_depth_contract(result.as_mut_ptr());
+            crate::diagnostic!("[depth-contract] rc={} pixels=1024 near_reject={} color_unchanged={} depth_words_changed={} far_accept={} gxm_draws={} elapsed_us={} presented=false",rc,result[0],result[1],result[2],result[3],result[4],start.elapsed().as_micros());
+            if rc!=0 {return Err(format!("depth contract failed rc={rc} result={result:?}"));}
+            device.check()?;Ok(device)
         }
         #[cfg(not(target_os="vita"))] {Err(unavailable())}
     }
@@ -80,6 +89,14 @@ impl Device {
         }
         #[cfg(not(target_os="vita"))] {Err(unavailable())}
     }
+    pub fn colors(&self,v:&[ColorVertex])->Result<(),String> {
+        #[cfg(target_os="vita")] unsafe {let rc=ffi::howaw_draw_colors(v.as_ptr(),v.len() as u32);if rc!=0 {return Err(format!("color batch error={rc}"));}self.check()}
+        #[cfg(not(target_os="vita"))] {let _=v;Err(unavailable())}
+    }
+    pub fn blend(&self,add:bool)->Result<(),String> {
+        #[cfg(target_os="vita")] unsafe {ffi::vita2d_set_blend_mode_add(i32::from(add));self.check()}
+        #[cfg(not(target_os="vita"))] {let _=add;Err(unavailable())}
+    }
     pub fn wait(&self) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_wait_rendering_done();}}
     pub fn end_without_present(&self)->Result<(),String> {
         #[cfg(target_os="vita")] unsafe {ffi::vita2d_end_drawing();self.check()}
@@ -87,7 +104,7 @@ impl Device {
     }
     pub fn free(&self,p:*mut c_void) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_free_texture(p);} #[cfg(not(target_os="vita"))] {let _=p;}}
 }
-impl Drop for Device {fn drop(&mut self) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_fini();}}}
+impl Drop for Device {fn drop(&mut self) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_wait_rendering_done();ffi::howaw_depth_fini();ffi::vita2d_fini();}}}
 
 pub fn readback(clear:u32)->Result<(),String> {
     #[cfg(target_os="vita")] unsafe {
