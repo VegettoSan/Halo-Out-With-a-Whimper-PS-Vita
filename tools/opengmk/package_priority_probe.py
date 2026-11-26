@@ -14,15 +14,16 @@ def main():
  p=argparse.ArgumentParser(description=__doc__)
  mode=p.add_mutually_exclusive_group(required=True);mode.add_argument('--prepare',action='store_true');mode.add_argument('--package',action='store_true')
  p.add_argument('--elf',type=Path);p.add_argument('--velf',type=Path);p.add_argument('--output',type=Path,required=True);p.add_argument('--title-id');p.add_argument('--app-version',default='00.19')
- p.add_argument('--wsl-distro',default='Ubuntu');p.add_argument('--sdk',default='/usr/local/vitasdk-hardfp');p.add_argument('--experiment',choices=['E019','E020','E021','E022','E023'],default='E019');a=p.parse_args()
+ p.add_argument('--wsl-distro',default='Ubuntu');p.add_argument('--sdk',default='/usr/local/vitasdk-hardfp');p.add_argument('--experiment',choices=['E019','E020','E021','E022','E023','E024'],default='E019');a=p.parse_args()
  root=Path(__file__).resolve().parents[2];out=a.output.resolve()
  if not out.is_relative_to(root/'build'):p.error('private output must stay under ignored build/')
  if not re.fullmatch(r'\d{2}\.\d{2}',a.app_version):p.error('APP_VER must have NN.NN format')
  if a.package and (a.title_id is None or not re.fullmatch('[A-Z0-9]{9}',a.title_id)):p.error('owner-selected nine-character uppercase alphanumeric TITLE_ID required')
- if a.experiment in ['E020','E021','E022','E023'] and a.package and a.title_id!='HOWAW1178':p.error('retain owner-selected HOWAW1178')
+ if a.experiment in ['E020','E021','E022','E023','E024'] and a.package and a.title_id!='HOWAW1178':p.error('retain owner-selected HOWAW1178')
  if a.experiment=='E021' and a.package and a.app_version!='00.22':p.error('E021 private diagnostic requires 00.22')
  if a.experiment=='E022' and a.package and a.app_version!='00.23':p.error('E022 private diagnostic requires 00.23')
  if a.experiment=='E023' and a.package and a.app_version!='00.24':p.error('E023 private diagnostic requires 00.24')
+ if a.experiment=='E024' and a.package and a.app_version!='00.25':p.error('E024 private diagnostic requires 00.25')
  def sdk(tool,*args):subprocess.run(['wsl','-d',a.wsl_distro,'--exec',a.sdk+'/bin/'+tool,*map(str,args)],check=True)
  if a.prepare:
   if a.title_id:p.error('preparation does not assign an ID; use --package only after owner selection')
@@ -36,6 +37,7 @@ def main():
   if a.experiment=='E021' and (b'[priority-effects]' not in data or b'e021-profile' not in data or b'VISUAL_PROBE_COMPLETED' in data):p.error('E021 services required; E020 visual fixture must be absent')
   if a.experiment=='E022' and (b'[sound-replace-registered]' not in data or b'[original-draw-enter]' not in data or b'VISUAL_PROBE_COMPLETED' in data):p.error('E022 actual MP3 registry/Draw path required, no repeated logo fixture')
   if a.experiment=='E023' and (any(m not in data for m in [b'[depth-contract]',b'[original-object-draw]',b'[mp3-scan]']) or b'VISUAL_PROBE_COMPLETED' in data):p.error('E023 depth proof, original Draw and one-pass scan required; no logo fixture')
+  if a.experiment=='E024' and (any(m not in data for m in [b'[input-sample]',b'[original-frame]',b'[depth-proof-reuse]']) or b'VISUAL_PROBE_COMPLETED' in data):p.error('E024 actual input + original frame loop required, no repeated logo fixture')
   out.mkdir(parents=True);sdk('vita-make-fself','-s',translate(str(velf)),translate(str(out/'eboot.bin')))
   manifest={'utc_prepared':datetime.now(timezone.utc).isoformat(),'experiment':'E019','title_id':None,'device_execution':'UNTESTED','purpose':'load/verify original EXE, compile real scripts/events, execute startup until actual unavailable dialog','files':{'eboot.bin':{'sha256':sha(out/'eboot.bin'),'bytes':(out/'eboot.bin').stat().st_size}},'elf_sha256':sha(elf),'velf_sha256':sha(velf),'original_exe_sha256':'cf0661731e049371f30d2e953dcbad7236eb83c93f0b615fa819dbe913d8773f','data_path':'ux0:data/howaw/HOWaW_FirefightDemov1.exe','logs':'ux0:data/howaw/diagnostics/e019-NNN/run.log','no_original_files_embedded':True,'vpk':None}
   if b'OWNER_POLICY_HIGH' in data:
@@ -48,6 +50,8 @@ def main():
    manifest.update(experiment='E022',purpose='real original MP3 decode/registration in unchanged VM startup; automatic original Draw entry, next native depth-clear gate; audio output unavailable',logs='ux0:data/howaw/diagnostics/e022-NNN/run.log',profile='ux0:data/howaw/e021-profile')
   if a.experiment=='E023':
    manifest.update(experiment='E023',purpose='offscreen real GXM depth/color/occlusion contract, faithful original 2D clear guard, original object Draw until next actual service; single validated MP3 scan; no manual menu',logs='ux0:data/howaw/diagnostics/e023-NNN/run.log',profile='ux0:data/howaw/e021-profile')
+  if a.experiment=='E024':
+   manifest.update(experiment='E024',purpose='real Vita controller/touch mapping and original Step/Draw/frame loop until next actual service or bounded session end; no fabricated input/audio',logs='ux0:data/howaw/diagnostics/e024-NNN/run.log',profile='ux0:data/howaw/e021-profile')
   (out/'manifest.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
   print('Prepared real VM SELF + manifest; no TITLE_ID, SFO or VPK generated.');return
  manifest=json.loads((out/'manifest.json').read_text(encoding='utf-8'))

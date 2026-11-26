@@ -2,7 +2,7 @@
 
 Keep only current work here; historical evidence belongs in EXPERIMENTS.md.
 
-- [ ] E024: audit original input requirements; real Vita controller sampling and held/pressed/released mapping, CPU contracts.
+- [x] E024 code/PC: input audit, real Ctrl/Touch bindings and pressed/held/released mapper; CPU contract PASS, ARM build PASS. Physical execution pending.
 - [ ] Run unchanged Game::frame with the existing event order and clock/pacing; follow actual errors, preserve diagnostics.
 - [ ] Verify original animated menu and navigation on hardware when a concrete build exists; record partial coverage explicitly.
 - [ ] Implement required graphics operations from actual traces; retain the E020–E023 backend and atlas budget.
