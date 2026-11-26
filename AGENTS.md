@@ -33,6 +33,7 @@
 6. Avoid multiple repetitive build cycles and token-heavy exploratory rewriting. Summarize findings concisely and reuse documented evidence.
 7. Advance technical phases only when evidence satisfies docs/ROADMAP.md; the owner explicitly approves publication, licensing, destructive actions and scope changes.
 8. Confirm the local ignored ZIP hash before decompilation. A different build is a different baseline; record rather than silently replace.
+9. When the owner requests autonomous development, continue through consecutive stages within the active session; do not stop after one experiment. Respect real session limits, preservation rules and indispensable owner decisions; keep a compact pending plan and never promise background work after the session ends.
 
 ## PS Vita specifics
 - Vita is ARMv7, while provided EXE is PE32 x86. Running it requires translation/adaptation; copying EXE into VPK is not enough.
