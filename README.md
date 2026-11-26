@@ -1,6 +1,6 @@
 # Halo: Out With a Whimper — PS Vita (research port)
 
-> **P1 / P2 native research.** E022 really decodes/registers the original menu MP3 on PC and physical Vita 1000, then reaches the original `Game::draw`: **76 VM instructions with a new profile / 65 with the existing profile**. The next native stop is `Graphics/clear_zbuf`, before object Draw events or a presented menu. E020 libvita2d/GXM backend reused with a bounded full-view mapping and error cleanup; no repeated logo. HOWAW1178/00.23 private diagnostic verified. Native audio output/input and gameplay remain incomplete; no playable game VPK exists.
+> **P1 / P2 native research.** E023 executes original object Draw events and completes `Game::init` on physical Vita 1000 at **105 VM instructions**. The reused libvita2d/GXM backend presents the original frame zero: **10 sprites, one rectangle, five batches**; readback has only **112 nonblack pixels**, so a complete visible menu remains unproven. Actual depth/color/occlusion proof PASS; next explicit stop **Window/poll_events** before the first `Game::frame`. Native input/audio output and gameplay remain incomplete. Private HOWAW1178/00.24 diagnostic verified; no functional/playable game VPK exists. [E023 evidence](docs/OPENGMK_DRAW_PROBE.md).
 
 This repository documents research toward a native PlayStation Vita adaptation of the Windows *Halo: Out With a Whimper — Firefight Demo*. **Primary goal: reuse the original executable/data/game logic wherever technically possible, not recreate the game from scratch.**
 

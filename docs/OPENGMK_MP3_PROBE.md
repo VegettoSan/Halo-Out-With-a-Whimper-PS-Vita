@@ -1,5 +1,7 @@
 # E022 — real MP3 replacement, native decode and original Draw entry
 
+**E023 follow-up:** [Validation integrated into the existing decoded length scan](OPENGMK_DRAW_PROBE.md) matches the streaming player on PC. Native 3.630 s versus this report's two-pass 6.846 s, with every candidate decoded and errors retained; no success cache or playback claim. Original object Draw and Game::init now complete and frame zero is presented; the next measured gate is Window/poll_events. The E022 depth-clear stop below remains historical evidence of an overstrict adapter, corrected using the original 2D guard.
+
 **2026-11-25 UTC / 2026-11-24 America/Bogota. VERIFIED:** `sound_replace(140, Music/menu.mp3, 3, true)` succeeds after actual decoding and valid asset registration on PC and physical Vita 1000. The unchanged original VM reaches **`Game::draw`**, with **76 instructions for a new profile / 65 for the existing profile**. Native execution then stops explicitly at **Graphics/clear_zbuf**, before object Draw events or a displayed menu. **Audio output remains unimplemented; no playback is claimed.** Private **HOWAW1178 / 00.23** installed SELF, log, input hashes and cleanup verified. No functional/playable game VPK exists.
 
 ## Contract and implementation

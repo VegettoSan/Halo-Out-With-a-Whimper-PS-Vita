@@ -4,7 +4,7 @@
 | --- | --- | --- | --- |
 | P0 | Archive/PE audit, baseline, tools | Hash+CRC, safe input layout, static PE features | COMPLETE: E001–E003; original hashes preserved, local tools inventoried |
 | P1 | Recover/evaluate runtime approaches | Exact runner identification, extraction attempt, Win32/import cost and an A/B decision supported by tests | ADVANCED/PARTIAL: recovery, PC menu/basic arena and E016 restart profile persistence PASS; exact vendor patch/full fidelity and intermittent audio remain open |
-| P2 | Native Vita proof of concept | True execution of recovered/original game logic, useful graphics, basic input and repeatable logs | PARTIAL: E022 original MP3 decode/registration and Game::draw entry on physical Vita, blocked at clear_zbuf before object Draw/presentation. E020 useful graphics reused; native input/audio output/menu incomplete; exit gate NOT MET |
+| P2 | Native Vita proof of concept | True execution of recovered/original game logic, useful graphics, basic input and repeatable logs | PARTIAL: E023 original Draw/Game::init and one real presented frame PASS on Vita; next Window/poll_events before Game::frame. Complete visible menu, native input/audio output and gameplay incomplete; exit gate NOT MET |
 | P3 | Functional parity | Real menu and one Firefight arena; controls, audio and persistent state if present, with regression evidence | NOT STARTED |
 | P4 | Performance and release review | Measured device frametimes/memory, stability, correctness and distribution-rights review | NOT STARTED |
 
@@ -17,4 +17,5 @@
 - Owner selects an unused title ID before any VPK packaging and separately approves public distribution.
 
 ## Next milestone
-E022 resolves MP3 replacement with actual PC/Vita decode and asset ownership, reaching original Game::draw at 76 new-profile / 65 existing-profile instructions. Native view setup passes; the next measured operation is a depth-only clear that preserves colour. Implement and verify that clear, then resume the same Draw to its next real request. Object drawing, state/shapes/text/blend/presentation, input and native audio output remain open; no gameplay FPS or full-game memory fit. See [E022](OPENGMK_MP3_PROBE.md).
+
+E023's actual GXM depth/color/occlusion proof passes, and original menu objects Draw and Game::init complete at 105 instructions. One authentic first frame is presented, but its 112 nonblack pixels do not establish a complete visible menu. Next implement actual Vita input/event polling with an explicit control mapping, then execute the unchanged Game::frame with normal pacing to advance the original fade and discover its next real service. Do not skip the pump, fake input/audio, or repeat only Draw in place of Step. Native audio output, text/gradient/outline branch coverage, pixel parity, suspend/resume and full-game memory fit remain open. [E023](OPENGMK_DRAW_PROBE.md).

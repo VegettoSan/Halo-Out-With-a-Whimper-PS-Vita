@@ -1,5 +1,7 @@
 # Porting strategy — prioritize faithful reuse
 
+**2026-11-26 UTC — E023:** Physical Vita: original object Draw and Game::init PASS at 105 instructions; actual frame zero presented (10 sprites, one rectangle, five batches). Readback has 112 nonblack pixels; complete visible menu remains unproven. Next honest stop Window/poll_events before Game::frame. Real depth/color contract PASS; only two GPU atlas pages, native MP3 scan 3.630 s. [Evidence](OPENGMK_DRAW_PROBE.md).
+
 **E022 evidence:** [existing OpenGMK MP3 player/rmp3 works in the ARM runtime](OPENGMK_MP3_PROBE.md) without libsoundio or a new decoder. Actual decode/registration unblocks original room startup to the engine's first Draw. Continue the reused libvita2d/GXM renderer at its measured depth-only-clear gate; keep playback capability explicitly unavailable. Full-song PCM retention is avoided, with native ownership/cleanup measurements. Route B remains best supported; no menu/playback/performance parity or phase exit follows.
 
 **E021 evidence:** original PC/Vita startup now passes the priority/file/INI gates using verified procedure-failure semantics and actual durable files, reaching **Audio/sound_replace** after 38 instructions. E020 renderer remains byte-identical. The next bounded route-B experiment is native MP3 decode/handle registration with measured memory and correct Deferred ownership before replacement success. Original menu Draw is still blocked; no audio/graphics success is invented to continue. [E021](OPENGMK_STARTUP_SERVICES_PROBE.md).
