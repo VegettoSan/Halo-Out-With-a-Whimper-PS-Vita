@@ -1,6 +1,8 @@
 use gm8emulator::{audio_source::{Source,SampleRate,ChannelCount},audio_wav::WavPlayer,audio_resampler::Resampler,audio_rechanneler::Rechanneler,audio_cycle::Cycle,game::audio::{mixer::Mixer,SoundParams,native_output::{NativeOutput,pcm16}}};
 use std::sync::{Arc,atomic::AtomicU32};
 fn main() {
+    assert_eq!(std::mem::align_of::<gm8emulator::game::audio::native_output::PcmBlock>(),64);
+    assert_eq!(std::mem::size_of::<gm8emulator::game::audio::native_output::PcmBlock>(),4096);
     let dir=std::env::args_os().nth(2).expect("new private diagnostic directory required");gm8emulator::diagnostics::open(std::path::Path::new(&dir)).unwrap();
     let jobs:Vec<_>=(0..2).map(|writer|std::thread::spawn(move ||for n in 0..20 {gm8emulator::diagnostic!("[concurrent-log-contract] writer={} item={}",writer,n);})).collect();
     for job in jobs {job.join().unwrap();}gm8emulator::diagnostics::check().unwrap();

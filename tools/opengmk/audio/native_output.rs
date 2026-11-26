@@ -3,6 +3,7 @@ use super::mixer::Mixer;
 use crate::audio_source::Source;
 use std::sync::{Arc,atomic::{AtomicBool,AtomicI32,AtomicUsize,Ordering}};
 #[derive(Default)] struct Counters {blocks:AtomicUsize,nonzero:AtomicUsize,clips:AtomicUsize,max_us:AtomicUsize}
+#[repr(align(64))] pub struct PcmBlock(pub [i16;2048]);
 pub struct NativeOutput {stop:Arc<AtomicBool>,error:Arc<AtomicI32>,stats:Arc<Counters>,thread:Option<std::thread::JoinHandle<()>>}
 #[cfg(target_os="vita")] extern "C" {
     fn sceAudioOutOpenPort(kind:i32,len:i32,freq:i32,mode:i32)->i32;
@@ -35,21 +36,23 @@ impl NativeOutput {
             let stats=Arc::new(Counters::default());let counters=stats.clone();
             let (quit,failed)=(stop.clone(),error.clone());
             let thread=match std::thread::Builder::new().name("howaw-audio".into()).stack_size(256*1024).spawn(move || {
-                let mut floats=[0f32;2048];let mut pcm=[0i16;2048];
+                let mut floats=[0f32;2048];let mut pcm=[PcmBlock([0;2048]),PcmBlock([0;2048])];let mut buffer_index=0;
                 let (mut blocks,mut nonzero,mut clips)=(0u64,0u64,0u64);let mut max_us=0;
                 while !quit.load(Ordering::Acquire) {
                     let start=std::time::Instant::now();
                     let n=mixer.write_samples(&mut floats);
                     if n!=floats.len(){failed.store(-1001,Ordering::Release);break;}
-                    let (nz,clipped)=match pcm16(&floats,&mut pcm){Ok(v)=>v,Err(e)=>{crate::diagnostic!("AUDIO_PCM_FAIL {}",e);failed.store(-1002,Ordering::Release);break;}};
+                    let (nz,clipped)=match pcm16(&floats,&mut pcm[buffer_index].0){Ok(v)=>v,Err(e)=>{crate::diagnostic!("AUDIO_PCM_FAIL {}",e);failed.store(-1002,Ordering::Release);break;}};
                     max_us=max_us.max(start.elapsed().as_micros());
-                    let rc=sceAudioOutOutput(port,pcm.as_ptr());if rc<0{failed.store(rc,Ordering::Release);break;}
+                    let rc=sceAudioOutOutput(port,pcm[buffer_index].0.as_ptr());if rc<0{failed.store(rc,Ordering::Release);break;}
+                    buffer_index^=1; // Do not overwrite the buffer still queued for the device.
                     blocks+=1;nonzero+=nz as u64;clips+=clipped as u64;
                     // No routine file I/O on the audio thread. Main-loop checkpoints
                     // read these counters; a disk sync must not stall audio output.
                     counters.blocks.store(blocks as usize,Ordering::Release);counters.nonzero.store(nonzero as usize,Ordering::Release);counters.clips.store(clips as usize,Ordering::Release);counters.max_us.store(max_us as usize,Ordering::Release);
                 }
                 let drain=sceAudioOutOutput(port,std::ptr::null());let release=sceAudioOutReleasePort(port);
+                std::hint::black_box(&pcm); // Keep both buffers alive through native drain/release.
                 if drain<0 {failed.store(drain,Ordering::Release);}if release<0{failed.store(release,Ordering::Release);}
                 crate::diagnostic!("[audio-worker-end] blocks={} nonzero_pcm_samples={} drain={} release={} error={}",blocks,nonzero,drain,release,failed.load(Ordering::Acquire));
             }) {Ok(t)=>t,Err(e)=>{let rc=sceAudioOutReleasePort(port);return Err(format!("audio thread spawn: {e}; port release={rc}"));}};
