@@ -18,6 +18,17 @@ static const SceGxmProgramParameter *depth_color;
 
 static atomic_int first_error, error_api;
 static atomic_uint draw_calls;
+#define HOWAW_POOL_BYTES (1024u*1024u)
+static unsigned int pool_peak,pool_failed_request,pool_failed_free;
+unsigned int howaw_pool_peak(void) {return pool_peak;}
+unsigned int howaw_pool_failed_request(void) {return pool_failed_request;}
+unsigned int howaw_pool_failed_free(void) {return pool_failed_free;}
+static void pool_measure(void) {unsigned int used=HOWAW_POOL_BYTES-vita2d_pool_free_space();if (used>pool_peak) pool_peak=used;}
+static void *vertex_alloc(unsigned int bytes) {
+    unsigned int available=vita2d_pool_free_space();void *p=vita2d_pool_memalign(bytes,16);
+    if (!p) {pool_failed_request=bytes;pool_failed_free=available;}
+    pool_measure();return p;
+}
 static int checked(int rc, int api) {
     if (rc < 0 && !first_error) { first_error=rc; error_api=api; }
     return rc;
@@ -157,7 +168,8 @@ int __wrap_sceGxmShaderPatcherCreateFragmentProgram(SceGxmShaderPatcher *p,SceGx
 
 int howaw_graphics_init(void) {
     first_error=error_api=0; draw_calls=0;
-    int rc=vita2d_init_advanced(256*1024);
+    pool_peak=pool_failed_request=pool_failed_free=0;
+    int rc=vita2d_init_advanced(HOWAW_POOL_BYTES);
     if (first_error) return first_error;
     if (rc!=1 || !vita2d_get_context() || !vita2d_get_shader_patcher() || !vita2d_get_linear_indices()) return -1;
     return 0;
@@ -234,23 +246,23 @@ void *howaw_texture_create(unsigned int w,unsigned int h,int main_ram,unsigned i
 }
 int howaw_draw_batch(const vita2d_texture *t,const vita2d_texture_vertex *v,unsigned int n,unsigned int tint) {
     if (!n || n>1536 || n%3 || !t) return -1;
-    void *gpu=vita2d_pool_memalign(n*sizeof(*v),16);
+    void *gpu=vertex_alloc(n*sizeof(*v));
     if (!gpu) return -2;
     memcpy(gpu,v,n*sizeof(*v));
     vita2d_draw_array_textured(t,SCE_GXM_PRIMITIVE_TRIANGLES,gpu,n,tint);
-    return first_error;
+    pool_measure();return first_error;
 }
 int howaw_draw_colors(const vita2d_color_vertex *v,unsigned int n) {
     if (!n || n>1536 || n%3) return -1;
-    void *gpu=vita2d_pool_memalign(n*sizeof(*v),16);if (!gpu) return -2;
-    memcpy(gpu,v,n*sizeof(*v));vita2d_draw_array(SCE_GXM_PRIMITIVE_TRIANGLES,gpu,n);return first_error;
+    void *gpu=vertex_alloc(n*sizeof(*v));if (!gpu) return -2;
+    memcpy(gpu,v,n*sizeof(*v));vita2d_draw_array(SCE_GXM_PRIMITIVE_TRIANGLES,gpu,n);pool_measure();return first_error;
 }
 int howaw_draw_lines(const vita2d_color_vertex *v,unsigned int n) {
     if (!n || n>1536 || n%2) return -1;
-    void *gpu=vita2d_pool_memalign(n*sizeof(*v),16);if (!gpu) return -2;
+    void *gpu=vertex_alloc(n*sizeof(*v));if (!gpu) return -2;
     memcpy(gpu,v,n*sizeof(*v));SceGxmContext *c=vita2d_get_context();
     sceGxmSetFrontPointLineWidth(c,1);sceGxmSetBackPointLineWidth(c,1);
-    vita2d_draw_array(SCE_GXM_PRIMITIVE_LINES,gpu,n);return first_error;
+    vita2d_draw_array(SCE_GXM_PRIMITIVE_LINES,gpu,n);pool_measure();return first_error;
 }
 int howaw_finish_frame(void) {
     vita2d_end_drawing();vita2d_wait_rendering_done();

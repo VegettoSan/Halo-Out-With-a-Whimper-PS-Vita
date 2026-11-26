@@ -16,6 +16,9 @@ mod ffi {
         pub fn howaw_gxm_error()->i32;
         pub fn howaw_gxm_error_api()->i32;
         pub fn howaw_gxm_draw_calls()->u32;
+        pub fn howaw_pool_peak()->u32;
+        pub fn howaw_pool_failed_request()->u32;
+        pub fn howaw_pool_failed_free()->u32;
         pub fn howaw_texture_create(w:u32,h:u32,main_ram:i32,stride:*mut u32,mapped:*mut u32)->*mut c_void;
         pub fn howaw_draw_batch(t:*mut c_void,v:*const Vertex,n:u32,col:u32)->i32;
         pub fn howaw_draw_colors(v:*const ColorVertex,n:u32)->i32;
@@ -35,10 +38,13 @@ mod ffi {
 }
 fn unavailable()->String {"SERVICE_UNAVAILABLE/Graphics: requires physical Vita GXM".into()}
 impl Device {
+    pub fn pool_metrics(&self) {
+        #[cfg(target_os="vita")] unsafe {crate::diagnostic!("[graphics-pool] capacity_bytes=1048576 peak_used_bytes={} failed_request_bytes={} failed_free_bytes={}",ffi::howaw_pool_peak(),ffi::howaw_pool_failed_request(),ffi::howaw_pool_failed_free());}
+    }
     pub fn new()->Result<Self,String> {
         #[cfg(target_os="vita")] unsafe {
             let rc=ffi::howaw_graphics_init();
-            crate::diagnostic!("[graphics-init] libvita2d/GXM rc={} pool_bytes=262144 msaa=none",rc);
+            crate::diagnostic!("[graphics-init] libvita2d/GXM rc={} pool_bytes=1048576 msaa=none",rc);
             if rc!=0 {return Err(format!("graphics init error={rc}"));}
             let device=Self;let mut result=[0u32;5];let start=std::time::Instant::now();
             let rc=ffi::howaw_depth_contract(result.as_mut_ptr());
@@ -94,7 +100,7 @@ impl Device {
     pub fn draw(&self,p:*mut c_void,v:&[Vertex],col:u32)->Result<(),String> {
         #[cfg(target_os="vita")] unsafe {
             let rc=ffi::howaw_draw_batch(p,v.as_ptr(),v.len() as u32,col);
-            if rc!=0 {return Err(format!("draw batch error={rc}"));}self.check()
+            if rc!=0 {self.pool_metrics();return Err(format!("draw batch error={rc}"));}self.check()
         }
         #[cfg(not(target_os="vita"))] {let _=(p,v,col);Err(unavailable())}
     }

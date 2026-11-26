@@ -16,7 +16,7 @@ struct Page {w:i32,h:i32,texture:*mut c_void,mapped:usize,main_ram:bool}
 pub struct Vita2d {
     entries:Vec<Entry>, pages:Vec<Page>, device:Option<native::Device>,
     vertices:Vec<Vertex>, key:Option<(usize,u32)>, in_scene:bool,
-    draws:u64, sprites:u64, uploads:u64, frames:u64, released:usize,
+    draws:u64, sprites:u64, uploads:u64, frames:u64, released:usize,culled:u64,
     view_scale:f64, view_y_scale:f64, view_offset:[f64;2], colors:Vec<geometry::ColorVertex>, add:bool, rectangles:u64, logical:[u32;2],
 }
 impl Vita2d {
@@ -24,13 +24,15 @@ impl Vita2d {
         let (packers,textures)=atl.into_inner();
         let pages=packers.iter().map(|p|{let (w,h)=p.size();Page{w,h,texture:std::ptr::null_mut(),mapped:0,main_ram:false}}).collect();
         let this=Self {entries:textures.into_iter().map(|(rect,pixels)|Entry{rect,pixels:Some(pixels)}).collect(),pages,
-            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,view_scale:1.,view_y_scale:1.,view_offset:[0.,0.],colors:Vec::with_capacity(1536),add:false,rectangles:0,logical:[960,544]};
+            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,culled:0,view_scale:1.,view_y_scale:1.,view_offset:[0.,0.],colors:Vec::with_capacity(1536),add:false,rectangles:0,logical:[960,544]};
         this.metrics("prepared");this
     }
     pub fn metrics(&self,stage:&str) {
         let pending:usize=self.entries.iter().filter_map(|e|e.pixels.as_ref()).map(|p|p.len()).sum();
         let mapped:usize=self.pages.iter().map(|p|p.mapped).sum();
         let main:usize=self.pages.iter().filter(|p|p.main_ram).map(|p|p.mapped).sum();
+        crate::diagnostic!("[graphics-cull] stage={} rejected_offscreen={} queued_sprites={}; original GML/events still execute",stage,self.culled,self.sprites);
+        if let Some(d)=&self.device {d.pool_metrics();}
         crate::diagnostic!("[atlas-pools] stage={} cdram_bytes={} main_ram_gpu_bytes={} total_bytes={}",stage,mapped-main,main,mapped);
         crate::diagnostic!("[graphics-memory] stage={} entries={} pages={} cpu_pending_bytes={} cpu_released_bytes={} gpu_texture_mapped_bytes={} page_uploads={} sprite_submissions={} rectangle_submissions={} queued_texture_vertices={} queued_color_vertices={} batch_draws={} frames={}",
             stage,self.entries.len(),self.pages.len(),pending,self.released,mapped,self.uploads,self.sprites,self.rectangles,self.vertices.len(),self.colors.len(),self.draws,self.frames);
@@ -145,17 +147,19 @@ impl RendererTrait for Vita2d {
         let Some(r)=self.get_rect(texture).copied() else{return;};
         if ![part_x,part_y,part_w,part_h,x,y,xscale,yscale,angle,alpha].iter().all(|x|x.is_finite()) {panic!("GRAPHICS_FAIL nonfinite sprite");}
         if !self.in_scene {panic!("GRAPHICS_FAIL draw_sprite without clear_view/begin");}
-        if !self.colors.is_empty() {Self::checked(self.flush());}
-        let page=r.atlas_id as usize;Self::checked(self.resident(page));
-        let key=(page,geometry::tint(col1,alpha));
+        let page=r.atlas_id as usize;
         let origin=if use_origin{[r.origin_x as f64,r.origin_y as f64]}else{[0.,0.]};
         let p=&self.pages[page];
         let atlas=[r.x as f64,r.y as f64,p.w as f64,p.h as f64];let part=[part_x,part_y,part_w,part_h];
+        let mut normal=geometry::quad(origin,part,[x,y],[xscale,yscale],angle,atlas);
+        if geometry::outside_view(&normal,[self.view_scale,self.view_y_scale],self.view_offset) {self.culled+=1;return;}
+        if !self.colors.is_empty() {Self::checked(self.flush());}
+        Self::checked(self.resident(page));let key=(page,geometry::tint(col1,alpha));
         if part_x<0. || part_y<0. || part_w<0. || part_h<0. || part_x+part_w>r.w as f64 || part_y+part_h>r.h as f64 {
             let (mut v,n)=geometry::clamped_quads(origin,part,[x,y],[xscale,yscale],angle,atlas,[r.w as f64,r.h as f64]);
             {static COUNT:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);if COUNT.fetch_add(1,std::sync::atomic::Ordering::Relaxed)<3 {crate::diagnostic!("[graphics-sprite-clamp] atlas_ref={} sprite={}x{} part={:?} vertices={} edge_pixels=true",texture.0,r.w,r.h,part,n);}}
             self.queue_sprite(&mut v[..n],key);
-        } else {let mut v=geometry::quad(origin,part,[x,y],[xscale,yscale],angle,atlas);self.queue_sprite(&mut v,key);}
+        } else {self.queue_sprite(&mut normal,key);}
         self.sprites+=1;
         if self.sprites<=3 {crate::diagnostic!("[graphics-sprite] submission={} atlas_ref={} page={} alpha={}",self.sprites,texture.0,page,alpha);}
     }

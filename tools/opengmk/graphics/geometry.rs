@@ -25,6 +25,11 @@ pub fn aspect_view(w:u32,h:u32)->(f64,[f64;2]) {
     (scale,[(960.-w as f64*scale)/2.,(544.-h as f64*scale)/2.])
 }
 pub fn shader_view(w:u32,h:u32)->[f64;2] {assert!(w>0 && h>0);[960./w as f64,544./h as f64]}
+/// Conservative clip rejection only; keep boundary/straddling/rotated quads.
+pub fn outside_view(v:&[Vertex],scale:[f64;2],offset:[f64;2])->bool {
+    let x=|v:&Vertex|f64::from(v.x)*scale[0]+offset[0];let y=|v:&Vertex|f64::from(v.y)*scale[1]+offset[1];
+    !v.is_empty() && (v.iter().all(|v|x(v)< -1.) || v.iter().all(|v|x(v)>961.) || v.iter().all(|v|y(v)< -1.) || v.iter().all(|v|y(v)>545.))
+}
 pub fn display_port(w:u32,h:u32,fill:bool)->[f64;4] {
     if fill {[0.,0.,960.,544.]}else{let(s,o)=aspect_view(w,h);[o[0],o[1],w as f64*s,h as f64*s]}
 }
@@ -83,6 +88,15 @@ pub fn copy_bgra(src:&[u8], dst:&mut [u8], width:usize, height:usize, stride:usi
 
 #[cfg(test)] mod tests {
     use super::*;
+    #[test] fn clip_rejection_keeps_crossing_rotated_and_camera_visible_quads() {
+        let q=|x,y,w,h,angle|quad([0.,0.],[0.,0.,w,h],[x,y],[1.,1.],angle,[0.,0.,2048.,2048.]);
+        assert!(outside_view(&q(-100.,100.,10.,10.,0.),[1.,1.],[0.,0.]));
+        assert!(outside_view(&q(100.,800.,10.,10.,45.),[1.,1.],[0.,0.]));
+        assert!(!outside_view(&q(-50.,100.,200.,10.,0.),[1.,1.],[0.,0.]));
+        assert!(!outside_view(&q(-10.,100.,200.,10.,-45.),[1.,1.],[0.,0.]));
+        assert!(!outside_view(&q(1200.,100.,20.,20.,0.),[1.5,544./325.],[-1200.*1.5,0.]));
+        assert!(!outside_view(&q(960.,544.,1.,1.,0.),[1.,1.],[0.,0.]));
+    }
     #[test] fn outline_is_closed_and_retains_original_endpoints_and_colors() {
         let v=rectangle_outline(20.,30.,10.,5.,[1,2,3,4],0.5);
         assert_eq!((v[0].x,v[0].y,v[0].color),(10.,5.,0x7f000001));
