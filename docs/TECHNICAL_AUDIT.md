@@ -1,6 +1,6 @@
 # Technical audit — session 2026-11-22 local / 2026-11-23 UTC
 
-**2026-11-26 UTC — E024–E026 current:** original normal frames, native Ctrl/Touch sampling, right-stick/X menu navigation and audible SceAudioOut music verified on physical Vita. Original resources/GML unchanged. E025 level selection stops at active-scene color clear; E026 correction/full-display test pending. Original rooms run at30 Hz; no displayed60 FPS or playable Firefight claim. [Current evidence and measurements](OPENGMK_RUNTIME_PROGRESS.md). Earlier entries below are historical.
+**2026-11-26 UTC — E024–E026 current:** original normal frames, native Ctrl/Touch sampling, right-stick/X menu navigation and audible SceAudioOut music verified on physical Vita. Original resources/GML unchanged. E026 active-scene clear/full-display PASS; original room6 stops at fifth atlas request. E027 bounded mapped-RAM overflow test pending. Original rooms run at30 Hz; no displayed60 FPS or playable Firefight claim. [Current evidence and measurements](OPENGMK_RUNTIME_PROGRESS.md). Earlier entries below are historical.
 
 **2026-11-26 UTC — E023:** Physical Vita: original object Draw and Game::init PASS at 105 instructions; actual frame zero presented (10 sprites, one rectangle, five batches). Readback has 112 nonblack pixels; complete visible menu remains unproven. Next honest stop Window/poll_events before Game::frame. Real depth/color contract PASS; only two GPU atlas pages, native MP3 scan 3.630 s. [Evidence](OPENGMK_DRAW_PROBE.md).
 

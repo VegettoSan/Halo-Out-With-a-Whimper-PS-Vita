@@ -1,6 +1,6 @@
 # Halo: Out With a Whimper — PS Vita (research port)
 
-> **Native menu diagnostic verified on physical Vita 1000.** E025 runs the original animated menu with right-stick/X navigation and audible native music, confirmed by the owner. Original VM, events, resources and 30 Hz room timing are preserved. Level entry currently stops at an active-scene graphics clear; E026/00.27 tests that correction and full-screen mapping. Playable Firefight and complete compatibility remain unverified. Private HOWAW1178 builds only; no game files are distributed here. [Measurements and pending work](docs/OPENGMK_RUNTIME_PROGRESS.md).
+> **Native menu diagnostic verified on physical Vita 1000.** E025 runs the original animated menu with right-stick/X navigation and audible native music, confirmed by the owner. Original VM, events, resources and 30 Hz room timing are preserved. E026 verifies full-screen mapping and active-scene clears; level entry now requests a fifth atlas beyond the prior64MiB limit. E027 tests bounded main-RAM overflow textures. Playable Firefight and complete compatibility remain unverified. Private HOWAW1178 builds only; no game files are distributed here. [Measurements and pending work](docs/OPENGMK_RUNTIME_PROGRESS.md).
 
 This repository documents research toward a native PlayStation Vita adaptation of the Windows *Halo: Out With a Whimper — Firefight Demo*. **Primary goal: reuse the original executable/data/game logic wherever technically possible, not recreate the game from scratch.**
 
