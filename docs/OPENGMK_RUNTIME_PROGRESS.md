@@ -1,0 +1,22 @@
+# Native runtime continuation — E024 onward
+
+Current pending work: [ACTIVE_PLAN](ACTIVE_PLAN.md). Keep historical E019–E023 reports unchanged.
+
+## E024 — input and normal frame flow
+
+**2026-11-26 UTC, VERIFIED:** HOWAW1178 / 00.25 executes real Ctrl/Touch polling and over 180 unchanged Game::frame calls. Owner saw the original white-letter/blue-background startup screen, reported lag and closure. GPU readbacks change across original frames; fade alpha progresses. Next actual stop: **Audio/sound_loop(140)**, exit 2, clean memory restoration. No simulated input or skipped Step/Draw.
+
+- Preserve original keyboard/mouse APIs. Current mapping: D-pad arrows, left stick WASD, right stick cursor (deadzone 24), X mouse-left, R mouse-right, Start Enter, Select Escape, Circle Space, Square R, Triangle E, L Shift; front touch maps through the real 640×325 aspect viewport and holds mouse-left. Button/touch sources are combined so releasing one cannot release a still-held click. Unmapped original keys and complete navigation remain pending; no full control-parity claim.
+- CPU synthetic-snapshot contract uses the real Input implementation: press/hold/release, no repeated press while held, source union, stick deadzone and touch/cursor bounds PASS. Real SDK queries require valid sample counts and fail on errors/interception rather than return neutral input.
+- Hardware log records changing physical left-stick values. No digital-button/touch transitions were captured in this run, so those remain UNTESTED physically. Original frame loop reuses upstream timing and scene-change dispatch; Game::frame byte-identical. Diagnostic limit 2,700 frames, no original GML/resources edited. Existing E023 depth fixture reused, not repeated.
+- Measured milestones: completed 60 / 120 / 180 at 7.524 / 13.297 / 15.983 s. These include cold diagnostics/readback/log stalls, not displayed FPS. Two resident atlas pages (33,554,432 B), free CDRAM 60,817,408 B; Rust heap at 180: 64,847,364 B, lifetime peak108,104,996 B. Exit heap1,134 B; native memory restores E023 baseline. Source sync-per-line logging is an INFERRED major stall contributor; E025 changes only routine telemetry buffering and will measure the result.
+- Inputs: unchanged H_ZIP/H_EXE/H_MUSIC/H_GMK from EXPERIMENTS.md. Rust/Cargo1.100.0, MSVC14.50.35717, SDK GCC15.2.0, offline/cached dependencies. Source `prepare_input_probe.py` chains E023, copies authored mapper/SDK ABI and original run-loop body. `prepare_graphics_native.py --input --output build/input24-native`; host Cargo features vita2d / bins howaw-vm-probe,input-contract; native same ELF target/flags as E023 with SceCtrl/SceTouch stubs. Host build1m42s, native1m38s, reuse22/22 PASS.
+- Exact commands and private evidence: `reports/local/input-20261125/` contains CPU/source audit, build logs, package/FTP, native log and installed SFO/SELF. Exact wrappers/source copy `local-tools/input-20261125/`, builds `build/input24-*`. VPK SHA-256 `b514c7209b9304de3a2220e9a124adfe064d30bf6bcc52bdb3cff3462e2c21f8`; installed SELF `b1e89774d5188998576d1c71b52cb697a59677c916382e3924deb703cf96a400`. All earlier builds retained, no new recovered resources.
+
+**PASS:** real sampling, original frame/event progression and visible startup animation. **BLOCKED:** actual music output, complete menu/navigation and Firefight. Continue E025 without requiring another owner prompt.
+
+## E025 — audio and diagnostic stalls (in progress)
+
+Reuse upstream Mixer, WAV player, resampler, rechanneler and cycle plus the E023 MP3 player. No new decoder or game-logic substitute. Preserve deferred volume/kind metadata and lazily register WAVs on actual use. The proposed checked BGM sink opens only on playback, verifies 44.1 kHz stereo configuration, converts finite mixed PCM to saturated i16 and releases/drains its port. Playback flags cannot update before opening a real sink; host native-output requests explicitly fail. Worker errors must reach the next frame, and routine audio-thread file I/O is avoided.
+
+CPU contract PASS with original WAV id1: stereo44.1 kHz /27,648 samples; actual reused mixer emits13,744 nonzero i16 samples over the bounded test; stop removes the source. Clipping/nonfinite rejection and concurrent persistent-log checkpoints PASS. No VM executed by this contract and no physical audio success claimed. Initial host preparation FAIL (wrong constructor/import selection), next FAIL (private lazy-registration helper); corrected attempts/logs retained. PCM/native-sink and logging code still requires final ARM/device validation.

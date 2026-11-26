@@ -342,10 +342,18 @@ Private evidence root **M = `reports/local/menu-probe-20261122/`**. Original inp
 - **Identity / evidence:** HOWAW1178 / 00.24, no embedded game data. First VPK `cbc5c31e5969e21494152689c916973e72a52a5b8b2a6c1410720272abed89c3`; revised VPK `a21c90dce7a3175747c36fb240c962944e3758b033d83dbe51b85228f8f9451b`, installed SELF `58c84e2a4a96cf0ef1f3a78e65accc59f007920655fff2992fce74e50e3f5757`, final log `2f1bd402cc3062302424a85de12b2c6ea98ad9ae94060bd3fcead24894ed2ced`. Both remote/installed identities checked. Owner reported first closure and confirmed revised execution; detailed visible-menu observation unavailable. Private `reports/local/draw-20261124/` build attempts, contracts, device-run-1/2 and validations; [sanitized report](OPENGMK_DRAW_PROBE.md).
 - **Result / next:** **PASS** actual depth/color contract, original object Draw, Game::init and first presentation; **BLOCKED** event/input pump, normal frame progression, complete visible menu and native audio output. Route B/original VM/libvita2d with bounded GXM extensions remains best supported. No functional game VPK or P2 exit. Next one experiment: implement real Vita input polling/mapping, then run unchanged Game::frame at normal pacing until original fade advances or the next real audio/graphics service stops it. Text/gradient/outline runtime branches, pixel parity and full-game memory fit remain unverified.
 
-## Template (copy for E024+)
+## E024 — real Vita input and unchanged normal frames
+
+- **UTC:** 2026-11-26; base main748ee90. Continuity/plan67f1f43, implementation8392fbe, direct main. Input H_ZIP/H_EXE/H_MUSIC/H_GMK unchanged; recovered resources zero.
+- **Hypothesis / PASS:** real Ctrl/Touch samples feed the existing Input and original normal frame loop; no neutral-input or Draw-only substitute. CPU transition/source-union/cursor contract PASS, reuse22/22, host1m42s/ARM1m38s/VELF PASS with existing offline E023 tools. `python tools/opengmk/prepare_input_probe.py --source local-tools/menu-probe-20261122/OpenGMK --output local-tools/input-20261125/OpenGMK --udon-source local-tools/arena-probe-20261122/udon-work/src/source.rs`; `python tools/opengmk/prepare_graphics_native.py --input --output build/input24-native`. Same Cargo target/features/link environment as E023, input-contract bin; exact command captures in private evidence.
+- **Observed Vita1000:** >180 original frames, real changing analog samples, original splash/fade seen by owner; BLOCKED Audio/sound_loop(140), exit2. Button/touch navigation physically UNTESTED. Completed180 elapsed15.983s with synchronous telemetry stalls; no displayed-FPS claim. Only two atlas pages32MiB, free CDRAM58MiB, Rust heap64,847,364 B; cleanup heap1,134 B and native memory restored. Owner reported lag and automatic closure; failed progression retained.
+- **Identity/evidence:** private HOWAW1178/00.25 VPK b514c7209b9304de3a2220e9a124adfe064d30bf6bcc52bdb3cff3462e2c21f8, installed SELF b1e89774d5188998576d1c71b52cb697a59677c916382e3924deb703cf96a400; verified native log/SFO/SELF under reports/local/input-20261125. [Mapping, limits and measurements](OPENGMK_RUNTIME_PROGRESS.md). No functional game VPK/full-menu/control-parity claim.
+- **Next:** real existing-mixer audio output plus bounded buffered routine telemetry, preserving durable error checkpoints; continue independently through actual next services. Game::frame/resources unchanged.
+
+## Template (copy for E025+)
 
 ```markdown
-### E024 — <one hypothesis>
+### E025 — <one hypothesis>
 - Date (UTC):
 - Input hashes:
 - Environment/tool version:
