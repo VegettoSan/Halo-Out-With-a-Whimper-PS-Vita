@@ -4,9 +4,10 @@ pub const SELECT:u32=1;pub const START:u32=8;
 pub const UP:u32=16;pub const RIGHT:u32=32;pub const DOWN:u32=64;pub const LEFT:u32=128;
 pub const L:u32=256;pub const R:u32=512;pub const TRIANGLE:u32=4096;pub const CIRCLE:u32=8192;pub const CROSS:u32=16384;pub const SQUARE:u32=32768;
 #[derive(Clone,Copy)] pub struct Sample {pub buttons:u32,pub axes:[u8;4],pub touch:Option<[f64;2]>}
-pub struct Mapper {held:[bool;256],mouse:[bool;3],cursor:[f64;2]}
-impl Default for Mapper {fn default()->Self {Self{held:[false;256],mouse:[false;3],cursor:[320.,162.]}}}
+pub struct Mapper {held:[bool;256],mouse:[bool;3],cursor:[f64;2],fill:bool}
+impl Default for Mapper {fn default()->Self {Self{held:[false;256],mouse:[false;3],cursor:[320.,162.],fill:false}}}
 impl Mapper {
+    pub fn set_fill(&mut self,fill:bool){self.fill=fill;}
     pub fn apply(&mut self,input:&mut Input,s:Sample,dt:f64,size:[u32;2])->usize {
         let mut next=[false;256];let b=s.buttons;let [lx,ly,rx,ry]=s.axes;
         let mut key=|vk:usize,on:bool| {next[vk]|=on;};
@@ -18,8 +19,8 @@ impl Mapper {
         let axis=|v:u8| {let n=f64::from(v)-128.;if n.abs()<=24.{0.}else{n.signum()*(n.abs()-24.)/103.}};
         if let Some([px,py])=s.touch {
             // Touch is in physical-display coordinates; undo the actual aspect viewport.
-            let scale=(960./size[0] as f64).min(544./size[1] as f64);
-            self.cursor=[(px-(960.-size[0] as f64*scale)/2.)/scale,(py-(544.-size[1] as f64*scale)/2.)/scale];
+            if self.fill {self.cursor=[px*size[0] as f64/960.,py*size[1] as f64/544.];}
+            else {let scale=(960./size[0] as f64).min(544./size[1] as f64);self.cursor=[(px-(960.-size[0] as f64*scale)/2.)/scale,(py-(544.-size[1] as f64*scale)/2.)/scale];}
         } else {
             self.cursor[0]+=axis(rx)*500.*dt.clamp(0.,0.1);
             self.cursor[1]+=axis(ry)*500.*dt.clamp(0.,0.1);

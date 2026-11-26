@@ -11,5 +11,6 @@ fn main() {
     i.step();map.apply(&mut i,idle,1./30.,[640,325]);assert!(i.mouse_check_button_released(1));
     i.step();let before=i.mouse_x();map.apply(&mut i,Sample{axes:[128,128,255,128],..idle},1./30.,[640,325]);assert!(i.mouse_x()>before);
     map.apply(&mut i,Sample{touch:Some([2000.,-500.]),..idle},1./30.,[640,325]);assert_eq!((i.mouse_x(),i.mouse_y()),(639,0));
+    map.set_fill(true);map.apply(&mut i,Sample{touch:Some([480.,64.]),..idle},1./30.,[640,325]);assert_eq!((i.mouse_x(),i.mouse_y()),(320,38));
     println!("INPUT_CONTRACT_PASS engine pressed/held/released, source union, deadzone, cursor/touch aspect bounds; synthetic CPU snapshots only, no hardware claim");
 }

@@ -4,6 +4,9 @@ use super::*;
 #[path="native.rs"] mod native;
 use std::ffi::c_void;
 use geometry::Vertex;
+static FILL_DISPLAY:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);
+pub fn set_display_fill(fill:bool) {FILL_DISPLAY.store(fill,std::sync::atomic::Ordering::Relaxed);}
+pub fn display_fill()->bool {FILL_DISPLAY.load(std::sync::atomic::Ordering::Relaxed)}
 
 struct Entry {rect:AtlasRect,pixels:Option<Box<[u8]>>}
 struct Page {w:i32,h:i32,texture:*mut c_void,mapped:usize}
@@ -36,6 +39,7 @@ impl Vita2d {
     }
     fn resident(&mut self,page:usize)->Result<(),String> {
         if !self.pages[page].texture.is_null(){return Ok(());}
+        crate::diagnostic!("[atlas-residency-request] page={} resident={:?}",page,self.pages.iter().enumerate().filter(|(_,p)|!p.texture.is_null()).map(|(i,_)|i).collect::<Vec<_>>());
         if self.device.is_none(){self.device=Some(native::Device::new()?);crate::diagnostics::native_memory("gxm_initialized");}
         // Keep all CPU payloads until allocation and validation succeed; never upload a page twice.
         let p=&self.pages[page];
@@ -135,21 +139,25 @@ impl RendererTrait for Vita2d {
     }
     fn set_view(&mut self,src_x:i32,src_y:i32,src_w:i32,src_h:i32,src_angle:f64,port_x:i32,port_y:i32,port_w:i32,port_h:i32) {
         // First original menu: one full-frame axis-aligned view. Other views stay explicit.
-        if src_x!=0 || src_y!=0 || port_x!=0 || port_y!=0 || src_angle!=0. || src_w!=port_w || src_h!=port_h || src_w<=0 || src_h<=0 {
+        if port_x!=0 || port_y!=0 || src_angle!=0. || src_w!=port_w || src_h!=port_h || src_w<=0 || src_h<=0 {
+            crate::diagnostic!("[unsupported-view] source={},{},{},{} angle={} port={},{},{},{}",src_x,src_y,src_w,src_h,src_angle,port_x,port_y,port_w,port_h);
             crate::host::unavailable(crate::host::Service::Graphics,"subview_or_rotated_view");
         }
         Self::checked(self.flush());
-        let (scale,offset)=geometry::aspect_view(src_w as u32,src_h as u32);
+        let port=geometry::display_port(src_w as u32,src_h as u32,display_fill());
         // Normalize into libvita2d's fixed shader coordinate domain, then use
         // a real GXM viewport. Clip-space clipping now bounds tiled backgrounds
         // to the original view without extra stencil draws or atlas copies.
         let shader=geometry::shader_view(src_w as u32,src_h as u32);
-        self.view_scale=shader[0];self.view_y_scale=shader[1];self.view_offset=[0.,0.];self.logical=[src_w as u32,src_h as u32];
-        Self::checked(self.device.as_ref().expect("view requires active device").viewport(offset[0] as f32,offset[1] as f32,(src_w as f64*scale) as f32,(src_h as f64*scale) as f32));
-        crate::diagnostic!("[graphics-view] logical={}x{} physical=960x544 scale={} offset={},{}; no GPU success implied",src_w,src_h,scale,offset[0],offset[1]);
+        self.view_scale=shader[0];self.view_y_scale=shader[1];self.view_offset=[-f64::from(src_x)*shader[0],-f64::from(src_y)*shader[1]];self.logical=[src_w as u32,src_h as u32];
+        Self::checked(self.device.as_ref().expect("view requires active device").viewport(port[0] as f32,port[1] as f32,port[2] as f32,port[3] as f32));
+        crate::diagnostic!("[graphics-view] source={},{},{}x{} physical_port={:?} fill={}",src_x,src_y,src_w,src_h,port,display_fill());
     }
     fn clear_view(&mut self,colour:Colour,alpha:f64) {
-        if self.in_scene {crate::host::unavailable(crate::host::Service::Graphics,"clear_inside_scene");}
+        if self.in_scene {
+            Self::checked(self.flush());Self::checked(self.device.as_ref().unwrap().clear(geometry::tint(colour.as_decimal() as i32,alpha)));
+            crate::diagnostic!("[graphics-clear] existing_scene=true color_and_depth=true viewport_preserved=true");return;
+        }
         if self.device.is_none(){self.device=Some(native::Device::new().unwrap_or_else(|e|panic!("GRAPHICS_FAIL {}",e)));crate::diagnostics::native_memory("gxm_initialized");}
         Self::checked(self.device.as_ref().unwrap().begin(geometry::tint(colour.as_decimal() as i32,alpha)));self.in_scene=true;
         Self::checked(self.device.as_ref().unwrap().blend(self.add));

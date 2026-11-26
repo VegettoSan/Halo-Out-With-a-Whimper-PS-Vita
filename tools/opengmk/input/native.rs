@@ -20,6 +20,7 @@ pub fn poll(game:&mut crate::game::Game)->Result<(),String> {
         } else {None};
         let mut s=STATE.get().unwrap().lock().map_err(|_|"input mutex poisoned")?;
         let now=std::time::Instant::now();let dt=now.duration_since(s.last).as_secs_f64();s.last=now;s.polls+=1;
+        s.mapper.set_fill(crate::render::vita2d::display_fill());
         let changes=s.mapper.apply(&mut game.input,Sample{buttons:out[0],axes:[out[1] as u8,out[2] as u8,out[3] as u8,out[4] as u8],touch},dt,[game.window_inner_size.0,game.window_inner_size.1]);
         if s.polls<=3 || changes>0 || s.polls%120==0 {crate::diagnostic!("[input-sample] poll={} buttons=0x{:x} axes={},{},{},{} contacts={} transitions={} cursor={},{}",s.polls,out[0],out[1],out[2],out[3],out[4],out[5],changes,game.input.mouse_x(),game.input.mouse_y());}
         Ok(())

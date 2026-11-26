@@ -54,7 +54,7 @@ def extend_input(root,reference):
     for name in ['game/draw.rs','host.rs','render/vita2d.rs']:
         p=src/name;s=p.read_text(encoding='utf-8')
         for line in s.splitlines():
-            if 'crate::diagnostic!(' in line and any(tag in line for tag in ['[original-draw-enter]','[original-object-draw]','[window-caption]','[graphics-view]','[graphics-depth]','[graphics-blend]']):
+            if 'crate::diagnostic!(' in line and any(tag in line for tag in ['[original-draw-enter]','[original-object-draw]','[window-caption]','[graphics-view]','[graphics-depth]','[graphics-blend]','[graphics-clear]']):
                 log=line[line.index('crate::diagnostic!('):];end=close(log,log.index('('),'(',')');call=log[:end]+';'
                 bounded='{static COUNT:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);let n=COUNT.fetch_add(1,std::sync::atomic::Ordering::Relaxed);if n<3 || n%120==0 {'+call+'}}'
                 s=s.replace(call,bounded,1)

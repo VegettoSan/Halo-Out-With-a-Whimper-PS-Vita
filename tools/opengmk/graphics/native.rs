@@ -11,6 +11,8 @@ mod ffi {
         pub fn howaw_depth_contract(result:*mut u32)->i32;
         pub fn howaw_depth_fini();
         pub fn howaw_viewport(x:f32,y:f32,w:f32,h:f32);
+        pub fn howaw_clear_color_depth(color:u32)->i32;
+        pub fn howaw_color_clear_contract(result:*mut u32)->i32;
         pub fn howaw_gxm_error()->i32;
         pub fn howaw_gxm_error_api()->i32;
         pub fn howaw_gxm_draw_calls()->u32;
@@ -73,8 +75,20 @@ impl Device {
         #[cfg(not(target_os="vita"))] {let _=(p,src,xywh,stride);panic!("{}",unavailable());}
     }
     pub fn begin(&self,colour:u32)->Result<(),String> {
-        #[cfg(target_os="vita")] unsafe {ffi::vita2d_start_drawing();self.check()?;ffi::howaw_viewport(0.,0.,960.,544.);ffi::vita2d_set_clear_color(colour);ffi::vita2d_clear_screen();self.check()}
+        #[cfg(target_os="vita")] unsafe {ffi::vita2d_start_drawing();self.check()?;ffi::howaw_viewport(0.,0.,960.,544.);self.clear(colour)}
         #[cfg(not(target_os="vita"))] {let _=colour;Err(unavailable())}
+    }
+    pub fn clear(&self,colour:u32)->Result<(),String> {
+        #[cfg(target_os="vita")] unsafe {let rc=ffi::howaw_clear_color_depth(colour);if rc!=0{return Err(format!("color/depth clear rc={rc}"));}self.check()}
+        #[cfg(not(target_os="vita"))] {let _=colour;Err(unavailable())}
+    }
+    pub fn color_clear_contract(&self)->Result<(),String> {
+        #[cfg(target_os="vita")] unsafe {
+            let mut result=[0u32;2];let rc=ffi::howaw_color_clear_contract(result.as_mut_ptr());
+            crate::diagnostic!("[color-clear-contract] rc={} color_overwrite={} far_depth_accept={} pixels=1024 presented=false",rc,result[0],result[1]);
+            if rc!=0 {return Err(format!("active color/depth clear contract rc={rc}"));}self.check()
+        }
+        #[cfg(not(target_os="vita"))] {Err(unavailable())}
     }
     pub fn draw(&self,p:*mut c_void,v:&[Vertex],col:u32)->Result<(),String> {
         #[cfg(target_os="vita")] unsafe {

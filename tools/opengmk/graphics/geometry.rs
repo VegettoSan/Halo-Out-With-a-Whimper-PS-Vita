@@ -21,6 +21,9 @@ pub fn aspect_view(w:u32,h:u32)->(f64,[f64;2]) {
     (scale,[(960.-w as f64*scale)/2.,(544.-h as f64*scale)/2.])
 }
 pub fn shader_view(w:u32,h:u32)->[f64;2] {assert!(w>0 && h>0);[960./w as f64,544./h as f64]}
+pub fn display_port(w:u32,h:u32,fill:bool)->[f64;4] {
+    if fill {[0.,0.,960.,544.]}else{let(s,o)=aspect_view(w,h);[o[0],o[1],w as f64*s,h as f64*s]}
+}
 
 pub fn tint(col:i32, alpha:f64)->u32 {
     (col as u32 & 0xffffff) | (((alpha.clamp(0.0,1.0)*255.0) as u32)<<24)
@@ -52,6 +55,13 @@ pub fn copy_bgra(src:&[u8], dst:&mut [u8], width:usize, height:usize, stride:usi
 
 #[cfg(test)] mod tests {
     use super::*;
+    #[test] fn fill_and_camera_translation_preserve_logical_coordinates() {
+        assert_eq!(display_port(640,325,true),[0.,0.,960.,544.]);
+        assert_eq!(display_port(640,325,false),[0.,28.25,960.,487.5]);
+        let shader=shader_view(640,325);let camera=[120.,45.];let world=[240.,85.];
+        let normalized=[(world[0]-camera[0])*shader[0]/960.,(world[1]-camera[1])*shader[1]/544.];
+        assert!((normalized[0]-120./640.).abs()<1e-10 && (normalized[1]-40./325.).abs()<1e-10);
+    }
     #[test] fn viewport_shader_domain_preserves_mapping_and_clip_bounds() {
         let (scale,offset)=aspect_view(640,325);let shader=shader_view(640,325);
         for (x,y) in [(0.,0.),(640.,325.),(123.,57.)] {

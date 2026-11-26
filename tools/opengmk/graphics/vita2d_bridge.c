@@ -164,6 +164,40 @@ int howaw_graphics_init(void) {
 void howaw_viewport(float x,float y,float w,float h) {
     sceGxmSetViewport(vita2d_get_context(),x+w/2,w/2,y+h/2,-h/2,0.5f,0.5f);
 }
+int howaw_clear_color_depth(unsigned int color) {
+    depth_state(SCE_GXM_DEPTH_FUNC_ALWAYS,SCE_GXM_DEPTH_WRITE_ENABLED);
+    vita2d_set_clear_color(color);vita2d_clear_screen();
+    depth_state(SCE_GXM_DEPTH_FUNC_ALWAYS,SCE_GXM_DEPTH_WRITE_DISABLED);
+    return first_error;
+}
+/* New E026 contract: overwrite color/depth inside an already-open scene;
+ * a far fragment must then pass the depth test in a second loaded scene. */
+int howaw_color_clear_contract(unsigned int result[2]) {
+    int rc=depth_init();if (rc<0) return rc;
+    vita2d_texture *t=vita2d_create_empty_texture_rendertarget(32,32,SCE_GXM_TEXTURE_FORMAT_A8B8G8R8);
+    if (!t) return -30;
+    SceGxmContext *c=vita2d_get_context();const float red[4]={1,0,0,1},blue[4]={0,0,1,1};
+    sceGxmDepthStencilSurfaceSetForceStoreMode(&t->gxm_sfd,SCE_GXM_DEPTH_STENCIL_FORCE_STORE_ENABLED);
+    for (unsigned int phase=0;phase<2 && rc==0;phase++) {
+        vita2d_pool_reset();sceGxmDepthStencilSurfaceSetForceLoadMode(&t->gxm_sfd,phase?SCE_GXM_DEPTH_STENCIL_FORCE_LOAD_ENABLED:SCE_GXM_DEPTH_STENCIL_FORCE_LOAD_DISABLED);
+        vita2d_start_drawing_advanced(t,0);
+        if (!phase) {
+            sceGxmSetViewport(c,16,16,16,-16,0.25f,0);
+            depth_state(SCE_GXM_DEPTH_FUNC_ALWAYS,SCE_GXM_DEPTH_WRITE_ENABLED);rc=depth_triangle(1,red);
+            sceGxmSetViewport(c,16,16,16,-16,0.5f,0.5f);
+            if (!rc) rc=howaw_clear_color_depth(0xff00ff00);
+        } else {
+            sceGxmSetViewport(c,16,16,16,-16,0.75f,0);
+            depth_state(SCE_GXM_DEPTH_FUNC_LESS,SCE_GXM_DEPTH_WRITE_ENABLED);rc=depth_triangle(1,blue);
+        }
+        vita2d_end_drawing();vita2d_wait_rendering_done();if (!rc) rc=first_error;
+        uint32_t *pixels=vita2d_texture_get_datap(t);
+        if (!rc) for (unsigned int i=0;i<1024;i++) result[phase]+=pixels[i]==(phase?0xffff0000:0xff00ff00);
+    }
+    depth_state(SCE_GXM_DEPTH_FUNC_ALWAYS,SCE_GXM_DEPTH_WRITE_DISABLED);sceGxmSetViewport(c,480,480,272,-272,0.5f,0.5f);
+    vita2d_free_texture(t);if (rc) return rc;
+    return result[0]==1024 && result[1]==1024?0:-31;
+}
 void *howaw_texture_create(unsigned int w,unsigned int h,unsigned int *stride,unsigned int *mapped) {
     vita2d_texture *t=vita2d_create_empty_texture(w,h);
     if (!t) return NULL;
