@@ -86,6 +86,11 @@ impl Vita2d {
         self.draws+=1;self.vertices.clear();Ok(())
     }
     fn checked(result:Result<(),String>) {if let Err(e)=result{crate::diagnostic!("GRAPHICS_FAIL {}",e);panic!("GRAPHICS_FAIL {}",e);}}
+    fn queue_sprite(&mut self,v:&mut [Vertex],key:(usize,u32)) {
+        if self.key!=Some(key) || self.vertices.len()+v.len()>1536 {Self::checked(self.flush());self.key=Some(key);}
+        for v in v.iter_mut() {v.x=(v.x as f64*self.view_scale+self.view_offset[0]) as f32;v.y=(v.y as f64*self.view_y_scale+self.view_offset[1]) as f32;}
+        self.vertices.extend_from_slice(v);
+    }
 }
 impl Drop for Vita2d {
     fn drop(&mut self) {
@@ -117,10 +122,17 @@ impl RendererTrait for Vita2d {
         self.add=add;crate::diagnostic!("[graphics-blend] src={:?} dst={:?}",src,dst);
     }
     fn draw_rectangle(&mut self,x1:f64,y1:f64,x2:f64,y2:f64,colour:i32,alpha:f64) {self.draw_rectangle_gradient(x1,y1,x2,y2,colour,colour,colour,colour,alpha,false);}
+    fn draw_rectangle_outline(&mut self,x1:f64,y1:f64,x2:f64,y2:f64,colour:i32,alpha:f64) {self.draw_rectangle_gradient(x1,y1,x2,y2,colour,colour,colour,colour,alpha,true);}
     fn draw_rectangle_gradient(&mut self,x1:f64,y1:f64,x2:f64,y2:f64,c1:i32,c2:i32,c3:i32,c4:i32,alpha:f64,outline:bool) {
-        if outline {crate::host::unavailable(crate::host::Service::Graphics,"rectangle_outline");}
         if ![x1,y1,x2,y2,alpha].iter().all(|v|v.is_finite()) {panic!("GRAPHICS_FAIL nonfinite rectangle");}
         if !self.in_scene {panic!("GRAPHICS_FAIL rectangle outside scene");}
+        if outline {
+            Self::checked(self.flush());let mut v=geometry::rectangle_outline(x1,y1,x2,y2,[c1,c2,c3,c4],alpha);
+            for v in &mut v {v.x=(f64::from(v.x)*self.view_scale+self.view_offset[0]) as f32;v.y=(f64::from(v.y)*self.view_y_scale+self.view_offset[1]) as f32;}
+            Self::checked(self.device.as_ref().unwrap().lines(&v));self.draws+=1;self.rectangles+=1;
+            {static ONCE:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);if !ONCE.swap(true,std::sync::atomic::Ordering::Relaxed) {crate::diagnostic!("[graphics-outline] closed=true vertices=8 native_line_width=1; scaled raster parity unverified");}}
+            return;
+        }
         if !self.vertices.is_empty() || self.colors.len()+6>1536 {Self::checked(self.flush());}
         let mut v=geometry::rectangle(x1,y1,x2,y2,[c1,c2,c3,c4],alpha);
         for v in &mut v {v.x=(f64::from(v.x)*self.view_scale+self.view_offset[0]) as f32;v.y=(f64::from(v.y)*self.view_y_scale+self.view_offset[1]) as f32;}
@@ -131,19 +143,20 @@ impl RendererTrait for Vita2d {
         x:f64,y:f64,xscale:f64,yscale:f64,angle:f64,col1:i32,col2:i32,col3:i32,col4:i32,alpha:f64,use_origin:bool) {
         if col1!=col2 || col1!=col3 || col1!=col4 {crate::host::unavailable(crate::host::Service::Graphics,"per_vertex_tint");}
         let Some(r)=self.get_rect(texture).copied() else{return;};
-        if ![part_x,part_y,part_w,part_h,x,y,xscale,yscale,angle,alpha].iter().all(|x|x.is_finite()) || part_x<0. || part_y<0. || part_w<0. || part_h<0. || part_x+part_w>r.w as f64 || part_y+part_h>r.h as f64 {
-            crate::host::unavailable(crate::host::Service::Graphics,"sprite_crop_out_of_bounds");
-        }
+        if ![part_x,part_y,part_w,part_h,x,y,xscale,yscale,angle,alpha].iter().all(|x|x.is_finite()) {panic!("GRAPHICS_FAIL nonfinite sprite");}
         if !self.in_scene {panic!("GRAPHICS_FAIL draw_sprite without clear_view/begin");}
         if !self.colors.is_empty() {Self::checked(self.flush());}
         let page=r.atlas_id as usize;Self::checked(self.resident(page));
         let key=(page,geometry::tint(col1,alpha));
-        if self.key!=Some(key) || self.vertices.len()+6>1536 {Self::checked(self.flush());self.key=Some(key);}
         let origin=if use_origin{[r.origin_x as f64,r.origin_y as f64]}else{[0.,0.]};
         let p=&self.pages[page];
-        let mut quad=geometry::quad(origin,[part_x,part_y,part_w,part_h],[x,y],[xscale,yscale],angle,[r.x as f64,r.y as f64,p.w as f64,p.h as f64]);
-        for v in &mut quad {v.x=(v.x as f64*self.view_scale+self.view_offset[0]) as f32;v.y=(v.y as f64*self.view_y_scale+self.view_offset[1]) as f32;}
-        self.vertices.extend_from_slice(&quad);self.sprites+=1;
+        let atlas=[r.x as f64,r.y as f64,p.w as f64,p.h as f64];let part=[part_x,part_y,part_w,part_h];
+        if part_x<0. || part_y<0. || part_w<0. || part_h<0. || part_x+part_w>r.w as f64 || part_y+part_h>r.h as f64 {
+            let (mut v,n)=geometry::clamped_quads(origin,part,[x,y],[xscale,yscale],angle,atlas,[r.w as f64,r.h as f64]);
+            {static COUNT:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);if COUNT.fetch_add(1,std::sync::atomic::Ordering::Relaxed)<3 {crate::diagnostic!("[graphics-sprite-clamp] atlas_ref={} sprite={}x{} part={:?} vertices={} edge_pixels=true",texture.0,r.w,r.h,part,n);}}
+            self.queue_sprite(&mut v[..n],key);
+        } else {let mut v=geometry::quad(origin,part,[x,y],[xscale,yscale],angle,atlas);self.queue_sprite(&mut v,key);}
+        self.sprites+=1;
         if self.sprites<=3 {crate::diagnostic!("[graphics-sprite] submission={} atlas_ref={} page={} alpha={}",self.sprites,texture.0,page,alpha);}
     }
     fn set_view(&mut self,src_x:i32,src_y:i32,src_w:i32,src_h:i32,src_angle:f64,port_x:i32,port_y:i32,port_w:i32,port_h:i32) {

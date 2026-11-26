@@ -14,6 +14,10 @@ pub fn rectangle(x1:f64,y1:f64,x2:f64,y2:f64,colors:[i32;4],alpha:f64)->[ColorVe
     let v=std::array::from_fn::<_,4,_>(|i|ColorVertex{color:tint(colors[i],alpha),..v[i]});
     [v[0],v[1],v[2],v[0],v[2],v[3]]
 }
+pub fn rectangle_outline(x1:f64,y1:f64,x2:f64,y2:f64,colors:[i32;4],alpha:f64)->[ColorVertex;8] {
+    let v=rectangle(x1,y1,x2,y2,colors,alpha);
+    [v[0],v[1],v[1],v[2],v[2],v[5],v[5],v[0]]
+}
 
 pub fn aspect_view(w:u32,h:u32)->(f64,[f64;2]) {
     assert!(w>0 && h>0);
@@ -44,6 +48,30 @@ pub fn quad(origin:[f64;2], part:[f64;4], position:[f64;2], scale:[f64;2],
     [v[0],v[1],v[2],v[0],v[2],v[3]]
 }
 
+/// Match the original non-repeating shader's per-sprite edge clamp. Splitting
+/// at the clamp boundaries preserves the interior UV slope, including reversed
+/// source extents; merely clamping four corner UVs would stretch the image.
+pub fn clamped_quads(origin:[f64;2],part:[f64;4],position:[f64;2],scale:[f64;2],angle:f64,atlas:[f64;4],sprite:[f64;2])->([Vertex;54],usize) {
+    fn cuts(start:f64,length:f64,size:f64)->([f64;4],usize) {
+        let mut t=[0.,1.,0.,0.];let mut n=2;
+        if length!=0. {for edge in [0.5,size-0.5] {let v=(edge-start)/length;if v>0. && v<1. {t[n]=v;n+=1;}}}
+        t[..n].sort_by(f64::total_cmp);(t,n)
+    }
+    let [px,py,pw,ph]=part;let [ax,ay,aw,ah]=atlas;
+    let (xs,nx)=cuts(px,pw,sprite[0]);let(ys,ny)=cuts(py,ph,sprite[1]);
+    let (sin,cos)=(-angle.to_radians()).sin_cos();let width=pw*scale[0];let height=ph*scale[1];
+    let left=-width*origin[0]-0.5;let top=-height*origin[1]-0.5;
+    let point=|tx:f64,ty:f64| {let x=left+width*tx;let y=top+height*ty;
+        Vertex{x:(position[0]+x*cos-y*sin) as f32,y:(position[1]+y*cos+x*sin) as f32,z:0.5,
+            u:((ax+(px+pw*tx).clamp(0.5,sprite[0]-0.5))/aw) as f32,
+            v:((ay+(py+ph*ty).clamp(0.5,sprite[1]-0.5))/ah) as f32}};
+    let mut out=[Vertex::default();54];let mut n=0;
+    for y in ys[..ny].windows(2) {for x in xs[..nx].windows(2) {
+        let v=[point(x[0],y[0]),point(x[1],y[0]),point(x[1],y[1]),point(x[0],y[1])];
+        out[n..n+6].copy_from_slice(&[v[0],v[1],v[2],v[0],v[2],v[3]]);n+=6;
+    }}(out,n)
+}
+
 /// Copy directly into mapped GPU memory. Source OpenGMK pixels are BGRA.
 pub fn copy_bgra(src:&[u8], dst:&mut [u8], width:usize, height:usize, stride:usize) {
     assert_eq!(src.len(),width*height*4);
@@ -55,6 +83,27 @@ pub fn copy_bgra(src:&[u8], dst:&mut [u8], width:usize, height:usize, stride:usi
 
 #[cfg(test)] mod tests {
     use super::*;
+    #[test] fn outline_is_closed_and_retains_original_endpoints_and_colors() {
+        let v=rectangle_outline(20.,30.,10.,5.,[1,2,3,4],0.5);
+        assert_eq!((v[0].x,v[0].y,v[0].color),(10.,5.,0x7f000001));
+        assert_eq!((v[3].x,v[3].y,v[3].color),(20.01,30.01,0x7f000003));
+        assert_eq!((v[7].x,v[7].y,v[7].color),(v[0].x,v[0].y,v[0].color));
+    }
+    #[test] fn outside_crop_clamps_edges_without_stretching_interior_or_losing_reversal() {
+        for (part,scale) in [([-2.,-3.,14.,17.],[1.,1.]),([12.,14.,-14.,-17.],[-1.,1.])] {
+            let (v,n)=clamped_quads([0.,0.],part,[100.,100.],scale,0.,[32.,64.,256.,256.],[10.,11.]);
+            assert!(n<=54 && n%6==0);
+            // Sample triangle centroids: affine UV interpolation must equal the
+            // original fragment shader's clamp at that actual screen position.
+            for tri in v[..n].chunks_exact(3) {
+                let x=tri.iter().map(|v|v.x as f64).sum::<f64>()/3.;let y=tri.iter().map(|v|v.y as f64).sum::<f64>()/3.;
+                let u=tri.iter().map(|v|v.u as f64).sum::<f64>()/3.;let vv=tri.iter().map(|v|v.v as f64).sum::<f64>()/3.;
+                let expected_u=(32.+(part[0]+(x-99.5)/scale[0]).clamp(0.5,9.5))/256.;
+                let expected_v=(64.+(part[1]+(y-99.5)/scale[1]).clamp(0.5,10.5))/256.;
+                assert!((u-expected_u).abs()<1e-6 && (vv-expected_v).abs()<1e-6);
+            }
+        }
+    }
     #[test] fn fill_and_camera_translation_preserve_logical_coordinates() {
         assert_eq!(display_port(640,325,true),[0.,0.,960.,544.]);
         assert_eq!(display_port(640,325,false),[0.,28.25,960.,487.5]);

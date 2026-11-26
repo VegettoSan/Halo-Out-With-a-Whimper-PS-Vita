@@ -245,6 +245,13 @@ int howaw_draw_colors(const vita2d_color_vertex *v,unsigned int n) {
     void *gpu=vita2d_pool_memalign(n*sizeof(*v),16);if (!gpu) return -2;
     memcpy(gpu,v,n*sizeof(*v));vita2d_draw_array(SCE_GXM_PRIMITIVE_TRIANGLES,gpu,n);return first_error;
 }
+int howaw_draw_lines(const vita2d_color_vertex *v,unsigned int n) {
+    if (!n || n>1536 || n%2) return -1;
+    void *gpu=vita2d_pool_memalign(n*sizeof(*v),16);if (!gpu) return -2;
+    memcpy(gpu,v,n*sizeof(*v));SceGxmContext *c=vita2d_get_context();
+    sceGxmSetFrontPointLineWidth(c,1);sceGxmSetBackPointLineWidth(c,1);
+    vita2d_draw_array(SCE_GXM_PRIMITIVE_LINES,gpu,n);return first_error;
+}
 int howaw_finish_frame(void) {
     vita2d_end_drawing();vita2d_wait_rendering_done();
     if (first_error) return first_error;

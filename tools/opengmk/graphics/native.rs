@@ -19,6 +19,7 @@ mod ffi {
         pub fn howaw_texture_create(w:u32,h:u32,main_ram:i32,stride:*mut u32,mapped:*mut u32)->*mut c_void;
         pub fn howaw_draw_batch(t:*mut c_void,v:*const Vertex,n:u32,col:u32)->i32;
         pub fn howaw_draw_colors(v:*const ColorVertex,n:u32)->i32;
+        pub fn howaw_draw_lines(v:*const ColorVertex,n:u32)->i32;
         pub fn vita2d_set_blend_mode_add(add:i32);
         pub fn howaw_finish_frame()->i32;
         pub fn vita2d_texture_get_datap(t:*mut c_void)->*mut u8;
@@ -106,6 +107,10 @@ impl Device {
     }
     pub fn colors(&self,v:&[ColorVertex])->Result<(),String> {
         #[cfg(target_os="vita")] unsafe {let rc=ffi::howaw_draw_colors(v.as_ptr(),v.len() as u32);if rc!=0 {return Err(format!("color batch error={rc}"));}self.check()}
+        #[cfg(not(target_os="vita"))] {let _=v;Err(unavailable())}
+    }
+    pub fn lines(&self,v:&[ColorVertex])->Result<(),String> {
+        #[cfg(target_os="vita")] unsafe {let rc=ffi::howaw_draw_lines(v.as_ptr(),v.len() as u32);if rc!=0 {return Err(format!("line batch error={rc}"));}self.check()}
         #[cfg(not(target_os="vita"))] {let _=v;Err(unavailable())}
     }
     pub fn blend(&self,add:bool)->Result<(),String> {
