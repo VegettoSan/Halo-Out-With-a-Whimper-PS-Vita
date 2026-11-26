@@ -11,7 +11,7 @@ from vita_wsl_link import translate
 
 LIBS=['vita2d','SceGxm_stub','SceDisplay_stub','SceCommonDialog_stub','SceAppMgr_stub','SceSysmodule_stub']
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--sdk',default='/usr/local/vitasdk-hardfp');p.add_argument('--distro',default='Ubuntu');p.add_argument('--input',action='store_true');a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path,required=True);p.add_argument('--sdk',default='/usr/local/vitasdk-hardfp');p.add_argument('--distro',default='Ubuntu');p.add_argument('--input',action='store_true');p.add_argument('--audio',action='store_true');a=p.parse_args()
     root=Path(__file__).resolve().parents[2];out=a.output.resolve()
     if not out.is_relative_to(root/'build') or out.exists():p.error('NEW ignored build/ output required')
     out.mkdir(parents=True);commands=[]
@@ -27,6 +27,7 @@ def main():
         run(a.sdk+'/bin/arm-vita-eabi-gcc','-mfloat-abi=hard','-std=c11','-O2','-Wall','-Wextra','-Werror','-c',translate(str(input_source.resolve())),'-o',translate(str(out/'vita_input.o')))
         objects.append(out/'vita_input.o');libs+=['SceCtrl_stub','SceTouch_stub']
     run(a.sdk+'/bin/arm-vita-eabi-ar','rcs',translate(str(out/'libhowaw_graphics.a')),*[translate(str(p)) for p in objects])
+    if a.audio:libs+=['SceAudio_stub']
     for lib in libs:
         run('cp',a.sdk+'/arm-vita-eabi/lib/lib'+lib+'.a',translate(str(out/('lib'+lib+'.a'))))
     hashes={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in out.glob('*.a')}

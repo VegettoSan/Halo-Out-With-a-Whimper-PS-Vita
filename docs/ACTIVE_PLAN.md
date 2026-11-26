@@ -6,7 +6,7 @@ Keep only current work here; historical evidence belongs in EXPERIMENTS.md.
 - [x] E024: normal Game::frame/Step/Draw flow runs on Vita; next actual gate Audio/sound_loop(140).
 - [ ] Verify original animated menu and navigation on hardware when a concrete build exists; record partial coverage explicitly.
 - [ ] Implement required graphics operations from actual traces; retain the E020–E023 backend and atlas budget.
-- [ ] E025: native output implementation + reuse of original mixer/WAV/resampler/MP3; CPU PCM/mixer/stop/concurrent-log contract PASS. ARM/hardware pending. Buffer routine telemetry; preserve durable panic/exit/checkpoints to address measured log stalls.
+- [ ] E025: native output implementation + reuse of original mixer/WAV/resampler/MP3; CPU PCM/mixer/stop/concurrent-log contract PASS. ARM build and default desktop check PASS; hardware pending. Buffer routine telemetry; preserve durable panic/exit/checkpoints to address measured log stalls.
 - [ ] Follow original menu/map/difficulty flow toward Site 117; resolve measured room/file/render/input/audio blockers.
 - [ ] Measure frame times, memory, residency and cleanup; add recoverable texture eviction only if requested pages exceed budget.
 
