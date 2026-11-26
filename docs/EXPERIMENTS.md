@@ -350,10 +350,19 @@ Private evidence root **M = `reports/local/menu-probe-20261122/`**. Original inp
 - **Identity/evidence:** private HOWAW1178/00.25 VPK b514c7209b9304de3a2220e9a124adfe064d30bf6bcc52bdb3cff3462e2c21f8, installed SELF b1e89774d5188998576d1c71b52cb697a59677c916382e3924deb703cf96a400; verified native log/SFO/SELF under reports/local/input-20261125. [Mapping, limits and measurements](OPENGMK_RUNTIME_PROGRESS.md). No functional game VPK/full-menu/control-parity claim.
 - **Next:** real existing-mixer audio output plus bounded buffered routine telemetry, preserving durable error checkpoints; continue independently through actual next services. Game::frame/resources unchanged.
 
-## Template (copy for E025+)
+## E025 — original navigable menu and real native audio
+
+- **UTC:** 2026-11-26; source32bee4f, direct main; H_ZIP/H_EXE/H_MUSIC/H_GMK unchanged, recovery zero. Existing offline E024 tools, rmp3 and pinned OpenGMK/udon pure mixer/players/transforms, no new decoder or downloads. Vita1000, firmware unreported.
+- **Hypothesis / commands:** feed original Mixer to a checked SceAudioOut BGM44100/stereo sink; preserve real registration/ownership and errors. `python tools/opengmk/prepare_audio_output_probe.py --source local-tools/menu-probe-20261122/OpenGMK --output local-tools/audio-final-20261125/OpenGMK --udon-source local-tools/arena-probe-20261122/udon-work/src/source.rs`; `python tools/opengmk/prepare_graphics_native.py --input --audio --output build/audio25-native`. Same E024 Cargo environment/targets/features, audio-output-contract bin. Exact wrappers/source under local-tools/audio-final-20261125; evidence reports/local/audio-20261125.
+- **PC PASS / failures retained:** real original WAV pipeline, looping-source stop, finite/saturated i16, native host failure and concurrent durable logs. Reuse22/22, audio6/6, MP3 byte-identical. Constructor/import selection FAIL then helper visibility FAIL corrected; final host38.50s, ARM1m32s, default desktop44.55s PASS. No fake native audio on PC.
+- **Vita PASS:** owner navigated original menu using right stick/X and confirmed music. At least1,260 original frames; actual port256 configuration readback, 1,636 audio blocks /3,337,849 nonzero PCM samples, drain/release0/error0. Real WAV121/67 playback. Buffered checkpoints reduce stalls: frame180 at7.224s vs15.983s E024; steady60-frame intervals~2.002s, original30Hz, not displayed-FPS proof. Sparse sampled CPU+GPU waits min10.066/median15.987/max22.694ms, no full distribution.
+- **BLOCKED:** requested level reaches original room flow then Graphics/clear_inside_scene at66,202 instructions, exit1. Four16MiB pages, CDRAM free26MiB; Rust live39,542,692 B /peak108,121,376 B. Cleanup17,530 B includes logging buffer; native free counters restored. No Firefight/gameplay PASS.
+- **Identity / next:** HOWAW1178/00.26 VPK c54c05500f2c39a4f61c9ae815aef689a0ed6bed53e3a1e59a879a1f11d49a1e; installed SELF6c4828a53c573f67c4f077a691bdc21d513a9ac0918d046bb83475fc7fac90b3, log97c77c917fb063fa1e0ebb557e293773d32fcffbeec1c6eef6ab5591161eb45c verified. [Compact report](OPENGMK_RUNTIME_PROGRESS.md). Next real active-scene color/depth clear and owner-requested full-display mapping, then continue level loading; keep original30Hz simulation and measure residency before changing its policy. Full options, touch navigation, pause/audio stress and complete-game parity remain unverified.
+
+## Template (copy for E026+)
 
 ```markdown
-### E025 — <one hypothesis>
+### E026 — <one hypothesis>
 - Date (UTC):
 - Input hashes:
 - Environment/tool version:
