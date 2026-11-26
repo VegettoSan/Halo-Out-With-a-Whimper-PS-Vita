@@ -1,5 +1,7 @@
 # Porting strategy — prioritize faithful reuse
 
+**2026-11-26 UTC — E024–E026 current:** original normal frames, native Ctrl/Touch sampling, right-stick/X menu navigation and audible SceAudioOut music verified on physical Vita. Original resources/GML unchanged. E025 level selection stops at active-scene color clear; E026 correction/full-display test pending. Original rooms run at30 Hz; no displayed60 FPS or playable Firefight claim. [Current evidence and measurements](OPENGMK_RUNTIME_PROGRESS.md). Earlier entries below are historical.
+
 **2026-11-26 UTC — E023:** Physical Vita: original object Draw and Game::init PASS at 105 instructions; actual frame zero presented (10 sprites, one rectangle, five batches). Readback has 112 nonblack pixels; complete visible menu remains unproven. Next honest stop Window/poll_events before Game::frame. Real depth/color contract PASS; only two GPU atlas pages, native MP3 scan 3.630 s. [Evidence](OPENGMK_DRAW_PROBE.md).
 
 **E022 evidence:** [existing OpenGMK MP3 player/rmp3 works in the ARM runtime](OPENGMK_MP3_PROBE.md) without libsoundio or a new decoder. Actual decode/registration unblocks original room startup to the engine's first Draw. Continue the reused libvita2d/GXM renderer at its measured depth-only-clear gate; keep playback capability explicitly unavailable. Full-song PCM retention is avoided, with native ownership/cleanup measurements. Route B remains best supported; no menu/playback/performance parity or phase exit follows.

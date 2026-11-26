@@ -1,6 +1,6 @@
 # Halo: Out With a Whimper — PS Vita (research port)
 
-> **P1 / P2 native research.** E023 executes original object Draw events and completes `Game::init` on physical Vita 1000 at **105 VM instructions**. The reused libvita2d/GXM backend presents the original frame zero: **10 sprites, one rectangle, five batches**; readback has only **112 nonblack pixels**, so a complete visible menu remains unproven. Actual depth/color/occlusion proof PASS; next explicit stop **Window/poll_events** before the first `Game::frame`. Native input/audio output and gameplay remain incomplete. Private HOWAW1178/00.24 diagnostic verified; no functional/playable game VPK exists. [E023 evidence](docs/OPENGMK_DRAW_PROBE.md).
+> **Native menu diagnostic verified on physical Vita 1000.** E025 runs the original animated menu with right-stick/X navigation and audible native music, confirmed by the owner. Original VM, events, resources and 30 Hz room timing are preserved. Level entry currently stops at an active-scene graphics clear; E026/00.27 tests that correction and full-screen mapping. Playable Firefight and complete compatibility remain unverified. Private HOWAW1178 builds only; no game files are distributed here. [Measurements and pending work](docs/OPENGMK_RUNTIME_PROGRESS.md).
 
 This repository documents research toward a native PlayStation Vita adaptation of the Windows *Halo: Out With a Whimper — Firefight Demo*. **Primary goal: reuse the original executable/data/game logic wherever technically possible, not recreate the game from scratch.**
 
@@ -21,7 +21,7 @@ See [technical audit](docs/TECHNICAL_AUDIT.md) for evidence and uncertainty.
 2. **Recover GameMaker data/GML and use a compatible runtime:** study [GM8Decompiler](https://github.com/OpenGMK/GM8Decompiler) and [OpenGMK](https://github.com/OpenGMK/OpenGMK); confirm exact runner version first.
 3. **Static x86-to-ARM recompilation:** expensive fallback, to be justified by evidence.
 
-**None of these approaches is proven for this game yet.** The Vita ARMv7 processor cannot directly launch a Windows x86 EXE.
+**Route B is currently best supported by PC arena and native menu evidence; full-game Vita compatibility is still unproven.** The Vita ARMv7 processor cannot directly launch a Windows x86 EXE.
 
 ## Start with Codex (Plus / Sol 6.1 high)
 

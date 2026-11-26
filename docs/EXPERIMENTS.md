@@ -359,10 +359,18 @@ Private evidence root **M = `reports/local/menu-probe-20261122/`**. Original inp
 - **BLOCKED:** requested level reaches original room flow then Graphics/clear_inside_scene at66,202 instructions, exit1. Four16MiB pages, CDRAM free26MiB; Rust live39,542,692 B /peak108,121,376 B. Cleanup17,530 B includes logging buffer; native free counters restored. No Firefight/gameplay PASS.
 - **Identity / next:** HOWAW1178/00.26 VPK c54c05500f2c39a4f61c9ae815aef689a0ed6bed53e3a1e59a879a1f11d49a1e; installed SELF6c4828a53c573f67c4f077a691bdc21d513a9ac0918d046bb83475fc7fac90b3, log97c77c917fb063fa1e0ebb557e293773d32fcffbeec1c6eef6ab5591161eb45c verified. [Compact report](OPENGMK_RUNTIME_PROGRESS.md). Next real active-scene color/depth clear and owner-requested full-display mapping, then continue level loading; keep original30Hz simulation and measure residency before changing its policy. Full options, touch navigation, pause/audio stress and complete-game parity remain unverified.
 
-## Template (copy for E026+)
+## E026 — actual active-scene clear and original room progression
+
+- **UTC:** 2026-11-26; graphics1d0fea4/audio-bufferse6913b5, direct main. H_ZIP/H_EXE/H_MUSIC/H_GMK unchanged; new recovered resources zero. Same offline Rust/Cargo1.100.0, MSVC14.50.35717, hard-float VitaSDK GCC15.2.0/libvita2d as E025; no downloads.
+- **Hypothesis / rule:** real color+far-depth overwrite in the existing GXM scene permits untouched room loading; offscreen32×32 contract requires1,024 overwritten green pixels and1,024 subsequent farther blue pixels passing depth. Preserve full-display/touch coordinates and original30Hz simulation. No success without actual readbacks/device progression.
+- **Commands:** `python tools/opengmk/prepare_room_probe.py --source local-tools/menu-probe-20261122/OpenGMK --output local-tools/room-final-20261125/OpenGMK --udon-source local-tools/arena-probe-20261122/udon-work/src/source.rs`; `python tools/opengmk/prepare_graphics_native.py --input --audio --output build/room26-native`; exact host/ARM wrappers there. Same E025 Cargo targets/features/link flags. Private reports/local/room-20261125 includes all attempts/contracts/builds, package/transfer identity and pending device logs; builds room26-* preserved.
+- **PC/ARM VERIFIED PASS:** final host37.24s/native54.75s, C-Werror; VM reuse22/22 and Game::frame byte-identical. Input/full-display, aligned PCM/lifetime layout, original WAV looping/stop/mix/log contracts PASS. Geometry exact-f64 assertion initially FAIL by one ULP; tolerance corrected assertion only. Optional atlas metadata helper could not access private Renderer rectangles; retained compile failures, no atlas-extent result claimed. Separate original room-header reader PASS: all15 rooms speed30, tile counts0–1,566. No original GML copied/edited.
+- **Identity / BLOCKED device pending:** HOWAW1178/00.27 VPK `15fcf0d382afb6dd825f4187fe2928cbfa23790c918bec0640141deaf35490ac`, SELF `71f41b542a8273bb420a7f07d4f2844ab3c00f6c3a246f9170421cca4ab56ff3`. Remote VPK and original EXE SHA verified; install/boot/color/depth/full-display/room progression UNTESTED until device log. No Firefight PASS. New clear contract is justified by actual E025 Graphics/clear_inside_scene; prior E020–E023 fixtures/readbacks not repeated. Next retrieve the original room transition and actual atlas request/next service.
+
+## Template (copy for E027+)
 
 ```markdown
-### E026 — <one hypothesis>
+### E027 — <one hypothesis>
 - Date (UTC):
 - Input hashes:
 - Environment/tool version:

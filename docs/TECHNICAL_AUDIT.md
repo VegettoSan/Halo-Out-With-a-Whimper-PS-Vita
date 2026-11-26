@@ -1,5 +1,7 @@
 # Technical audit — session 2026-11-22 local / 2026-11-23 UTC
 
+**2026-11-26 UTC — E024–E026 current:** original normal frames, native Ctrl/Touch sampling, right-stick/X menu navigation and audible SceAudioOut music verified on physical Vita. Original resources/GML unchanged. E025 level selection stops at active-scene color clear; E026 correction/full-display test pending. Original rooms run at30 Hz; no displayed60 FPS or playable Firefight claim. [Current evidence and measurements](OPENGMK_RUNTIME_PROGRESS.md). Earlier entries below are historical.
+
 **2026-11-26 UTC — E023:** Physical Vita: original object Draw and Game::init PASS at 105 instructions; actual frame zero presented (10 sprites, one rectangle, five batches). Readback has 112 nonblack pixels; complete visible menu remains unproven. Next honest stop Window/poll_events before Game::frame. Real depth/color contract PASS; only two GPU atlas pages, native MP3 scan 3.630 s. [Evidence](OPENGMK_DRAW_PROBE.md).
 
 **E022 follow-up:** [Real MP3 replacement PASS on PC and physical Vita](OPENGMK_MP3_PROBE.md), reusing OpenGMK's player/rmp3 with bounded streaming buffers. Original sound 140: 44.1 kHz stereo, 7,130,880 PCM samples checked; valid registration, no playback claimed. Original `Game::draw` reached at 76 fresh-profile / 65 existing-profile instructions. Native GXM/view initializes, then honest clear_zbuf stop; incomplete scene and sound released, exit 2. No object Draw events/presented menu, native audio output or functional game VPK. Original inputs and prior builds retained.
