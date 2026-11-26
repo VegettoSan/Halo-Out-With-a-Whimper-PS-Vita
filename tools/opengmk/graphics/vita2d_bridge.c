@@ -15,6 +15,7 @@ static int depth_vregistered, depth_fregistered;
 static SceGxmVertexProgram *depth_vp;
 static SceGxmFragmentProgram *depth_fp, *probe_fp;
 static const SceGxmProgramParameter *depth_color;
+static void tint_fini(void);
 
 static atomic_int first_error, error_api;
 static atomic_uint draw_calls;
@@ -38,6 +39,7 @@ int howaw_gxm_error_api(void) { return error_api; }
 unsigned int howaw_gxm_draw_calls(void) { return draw_calls; }
 
 void howaw_depth_fini(void) {
+    tint_fini();
     SceGxmShaderPatcher *p=vita2d_get_shader_patcher();
     if (probe_fp) checked(sceGxmShaderPatcherReleaseFragmentProgram(p,probe_fp),20);
     if (depth_fp) checked(sceGxmShaderPatcherReleaseFragmentProgram(p,depth_fp),20);
@@ -271,3 +273,4 @@ int howaw_finish_frame(void) {
     checked(sceGxmDisplayQueueFinish(),9);
     return first_error;
 }
+#include "vertex_tint.c"

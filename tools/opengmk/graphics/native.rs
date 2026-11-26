@@ -23,6 +23,7 @@ mod ffi {
         pub fn howaw_draw_batch(t:*mut c_void,v:*const Vertex,n:u32,col:u32)->i32;
         pub fn howaw_draw_colors(v:*const ColorVertex,n:u32)->i32;
         pub fn howaw_draw_lines(v:*const ColorVertex,n:u32)->i32;
+        pub fn howaw_draw_tinted(t:*mut c_void,v:*const super::super::tint::TintVertex,n:u32,add:i32)->i32;
         pub fn vita2d_set_blend_mode_add(add:i32);
         pub fn howaw_finish_frame()->i32;
         pub fn vita2d_texture_get_datap(t:*mut c_void)->*mut u8;
@@ -38,6 +39,10 @@ mod ffi {
 }
 fn unavailable()->String {"SERVICE_UNAVAILABLE/Graphics: requires physical Vita GXM".into()}
 impl Device {
+    pub fn tinted(&self,p:*mut c_void,v:&[super::tint::TintVertex],add:bool)->Result<(),String> {
+        #[cfg(target_os="vita")] unsafe {let rc=ffi::howaw_draw_tinted(p,v.as_ptr(),v.len() as u32,add as i32);if rc!=0 {return Err(format!("per-vertex draw rc={rc}"));}self.check()}
+        #[cfg(not(target_os="vita"))] {let _=(p,v,add);Err(unavailable())}
+    }
     pub fn pool_metrics(&self) {
         #[cfg(target_os="vita")] unsafe {crate::diagnostic!("[graphics-pool] capacity_bytes=1048576 peak_used_bytes={} failed_request_bytes={} failed_free_bytes={}",ffi::howaw_pool_peak(),ffi::howaw_pool_failed_request(),ffi::howaw_pool_failed_free());}
     }

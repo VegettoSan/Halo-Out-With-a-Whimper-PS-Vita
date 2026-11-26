@@ -14,12 +14,12 @@ def main():
  p=argparse.ArgumentParser(description=__doc__)
  mode=p.add_mutually_exclusive_group(required=True);mode.add_argument('--prepare',action='store_true');mode.add_argument('--package',action='store_true')
  p.add_argument('--elf',type=Path);p.add_argument('--velf',type=Path);p.add_argument('--output',type=Path,required=True);p.add_argument('--title-id');p.add_argument('--app-version',default='00.19')
- p.add_argument('--wsl-distro',default='Ubuntu');p.add_argument('--sdk',default='/usr/local/vitasdk-hardfp');p.add_argument('--experiment',choices=['E019','E020','E021','E022','E023','E024','E025','E026','E027','E028','E029'],default='E019');a=p.parse_args()
+ p.add_argument('--wsl-distro',default='Ubuntu');p.add_argument('--sdk',default='/usr/local/vitasdk-hardfp');p.add_argument('--experiment',choices=['E019','E020','E021','E022','E023','E024','E025','E026','E027','E028','E029','E030'],default='E019');a=p.parse_args()
  root=Path(__file__).resolve().parents[2];out=a.output.resolve()
  if not out.is_relative_to(root/'build'):p.error('private output must stay under ignored build/')
  if not re.fullmatch(r'\d{2}\.\d{2}',a.app_version):p.error('APP_VER must have NN.NN format')
  if a.package and (a.title_id is None or not re.fullmatch('[A-Z0-9]{9}',a.title_id)):p.error('owner-selected nine-character uppercase alphanumeric TITLE_ID required')
- if a.experiment in ['E020','E021','E022','E023','E024','E025','E026','E027','E028','E029'] and a.package and a.title_id!='HOWAW1178':p.error('retain owner-selected HOWAW1178')
+ if a.experiment in ['E020','E021','E022','E023','E024','E025','E026','E027','E028','E029','E030'] and a.package and a.title_id!='HOWAW1178':p.error('retain owner-selected HOWAW1178')
  if a.experiment=='E021' and a.package and a.app_version!='00.22':p.error('E021 private diagnostic requires 00.22')
  if a.experiment=='E022' and a.package and a.app_version!='00.23':p.error('E022 private diagnostic requires 00.23')
  if a.experiment=='E023' and a.package and a.app_version!='00.24':p.error('E023 private diagnostic requires 00.24')
@@ -29,6 +29,7 @@ def main():
  if a.experiment=='E027' and a.package and a.app_version!='00.28':p.error('E027 private diagnostic requires 00.28')
  if a.experiment=='E028' and a.package and a.app_version!='00.29':p.error('E028 private diagnostic requires 00.29')
  if a.experiment=='E029' and a.package and a.app_version!='00.30':p.error('E029 private diagnostic requires 00.30')
+ if a.experiment=='E030' and a.package and a.app_version!='00.31':p.error('E030 private diagnostic requires 00.31')
  def sdk(tool,*args):subprocess.run(['wsl','-d',a.wsl_distro,'--exec',a.sdk+'/bin/'+tool,*map(str,args)],check=True)
  if a.prepare:
   if a.title_id:p.error('preparation does not assign an ID; use --package only after owner selection')
@@ -48,6 +49,7 @@ def main():
   if a.experiment=='E027' and (any(m not in data for m in [b'[atlas-pools]',b'[atlas-upload]',b'[frame-window]',b'[original-room-load]',b'[color-clear-proof-reuse]']) or b'VISUAL_PROBE_COMPLETED' in data):p.error('E027 actual bounded residency/frame telemetry/room path required')
   if a.experiment=='E028' and (any(m not in data for m in [b'[graphics-outline]',b'[graphics-sprite-clamp]',b'[atlas-pools]',b'[original-room-load]']) or b'VISUAL_PROBE_COMPLETED' in data):p.error('E028 real original outline/clamped-crop/room paths required')
   if a.experiment=='E029' and (any(m not in data for m in [b'[gml-debug]',b'[graphics-cull]',b'[graphics-pool]',b'[original-room-load]']) or b'VISUAL_PROBE_COMPLETED' in data):p.error('E029 genuine debug sink and all-room clip/pool metrics required')
+  if a.experiment=='E030' and (b'[graphics-per-vertex]' not in data or b'VISUAL_PROBE_COMPLETED' in data):p.error('E030 real per-vertex GXM path required')
   out.mkdir(parents=True);sdk('vita-make-fself','-s',translate(str(velf)),translate(str(out/'eboot.bin')))
   manifest={'utc_prepared':datetime.now(timezone.utc).isoformat(),'experiment':'E019','title_id':None,'device_execution':'UNTESTED','purpose':'load/verify original EXE, compile real scripts/events, execute startup until actual unavailable dialog','files':{'eboot.bin':{'sha256':sha(out/'eboot.bin'),'bytes':(out/'eboot.bin').stat().st_size}},'elf_sha256':sha(elf),'velf_sha256':sha(velf),'original_exe_sha256':'cf0661731e049371f30d2e953dcbad7236eb83c93f0b615fa819dbe913d8773f','data_path':'ux0:data/howaw/HOWaW_FirefightDemov1.exe','logs':'ux0:data/howaw/diagnostics/e019-NNN/run.log','no_original_files_embedded':True,'vpk':None}
   if b'OWNER_POLICY_HIGH' in data:
@@ -72,6 +74,8 @@ def main():
    manifest.update(experiment='E028',purpose='original customization closed rectangle outline and room per-sprite edge-clamped crops; existing real audio/input and bounded memory; first completed arena frame still unverified',logs='ux0:data/howaw/diagnostics/e028-NNN/run.log',profile='ux0:data/howaw/e021-profile')
   if a.experiment=='E029':
    manifest.update(experiment='E029',purpose='real persistent GML debug output, conservative all-room viewport rejection and measured1MiB temporary vertex pool; preserve original events and bounded atlas residency',logs='ux0:data/howaw/diagnostics/e029-NNN/run.log',profile='ux0:data/howaw/e021-profile')
+  if a.experiment=='E030':
+   manifest.update(experiment='E030',purpose='original per-vertex textured color after arena countdown, cached native GXM programs and existing renderer/VM',logs='ux0:data/howaw/diagnostics/e030-NNN/run.log',profile='ux0:data/howaw/e021-profile')
   (out/'manifest.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
   print('Prepared real VM SELF + manifest; no TITLE_ID, SFO or VPK generated.');return
  manifest=json.loads((out/'manifest.json').read_text(encoding='utf-8'))

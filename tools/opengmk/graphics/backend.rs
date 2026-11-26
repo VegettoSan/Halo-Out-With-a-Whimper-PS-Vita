@@ -3,6 +3,7 @@ use super::*;
 #[path="geometry.rs"] pub mod geometry;
 #[path="native.rs"] mod native;
 #[path="residency.rs"] mod residency;
+#[path="tint.rs"] mod tint;
 use std::ffi::c_void;
 use geometry::Vertex;
 static FILL_DISPLAY:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);
@@ -143,7 +144,6 @@ impl RendererTrait for Vita2d {
     }
     fn draw_sprite_general(&mut self,texture:AtlasRef,part_x:f64,part_y:f64,part_w:f64,part_h:f64,
         x:f64,y:f64,xscale:f64,yscale:f64,angle:f64,col1:i32,col2:i32,col3:i32,col4:i32,alpha:f64,use_origin:bool) {
-        if col1!=col2 || col1!=col3 || col1!=col4 {crate::host::unavailable(crate::host::Service::Graphics,"per_vertex_tint");}
         let Some(r)=self.get_rect(texture).copied() else{return;};
         if ![part_x,part_y,part_w,part_h,x,y,xscale,yscale,angle,alpha].iter().all(|x|x.is_finite()) {panic!("GRAPHICS_FAIL nonfinite sprite");}
         if !self.in_scene {panic!("GRAPHICS_FAIL draw_sprite without clear_view/begin");}
@@ -155,6 +155,12 @@ impl RendererTrait for Vita2d {
         if geometry::outside_view(&normal,[self.view_scale,self.view_y_scale],self.view_offset) {self.culled+=1;return;}
         if !self.colors.is_empty() {Self::checked(self.flush());}
         Self::checked(self.resident(page));let key=(page,geometry::tint(col1,alpha));
+        if col1!=col2 || col1!=col3 || col1!=col4 {
+            Self::checked(self.flush());let mut v=tint::vertices(origin,part,[x,y],[xscale,yscale],angle,atlas,[r.w as f64,r.h as f64],[col1,col2,col3,col4],alpha);
+            for v in &mut v {v.x=(f64::from(v.x)*self.view_scale+self.view_offset[0]) as f32;v.y=(f64::from(v.y)*self.view_y_scale+self.view_offset[1]) as f32;}
+            Self::checked(self.device.as_ref().unwrap().tinted(self.pages[page].texture,&v,self.add));self.sprites+=1;self.draws+=1;
+            {static ONCE:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);if !ONCE.swap(true,std::sync::atomic::Ordering::Relaxed) {crate::diagnostic!("[graphics-per-vertex] vertices={} native_texture_times_interpolated_color=true",v.len());}}return;
+        }
         if part_x<0. || part_y<0. || part_w<0. || part_h<0. || part_x+part_w>r.w as f64 || part_y+part_h>r.h as f64 {
             let (mut v,n)=geometry::clamped_quads(origin,part,[x,y],[xscale,yscale],angle,atlas,[r.w as f64,r.h as f64]);
             {static COUNT:std::sync::atomic::AtomicUsize=std::sync::atomic::AtomicUsize::new(0);if COUNT.fetch_add(1,std::sync::atomic::Ordering::Relaxed)<3 {crate::diagnostic!("[graphics-sprite-clamp] atlas_ref={} sprite={}x{} part={:?} vertices={} edge_pixels=true",texture.0,r.w,r.h,part,n);}}
