@@ -16,7 +16,7 @@ mod ffi {
         pub fn howaw_gxm_error()->i32;
         pub fn howaw_gxm_error_api()->i32;
         pub fn howaw_gxm_draw_calls()->u32;
-        pub fn howaw_texture_create(w:u32,h:u32,stride:*mut u32,mapped:*mut u32)->*mut c_void;
+        pub fn howaw_texture_create(w:u32,h:u32,main_ram:i32,stride:*mut u32,mapped:*mut u32)->*mut c_void;
         pub fn howaw_draw_batch(t:*mut c_void,v:*const Vertex,n:u32,col:u32)->i32;
         pub fn howaw_draw_colors(v:*const ColorVertex,n:u32)->i32;
         pub fn vita2d_set_blend_mode_add(add:i32);
@@ -54,15 +54,15 @@ impl Device {
         }
         #[cfg(not(target_os="vita"))] {Err(unavailable())}
     }
-    pub fn texture(&self,w:u32,h:u32)->Result<(*mut c_void,usize,usize),String> {
+    pub fn texture(&self,w:u32,h:u32,main_ram:bool)->Result<(*mut c_void,usize,usize),String> {
         #[cfg(target_os="vita")] unsafe {
             let (mut stride,mut mapped)=(0,0);
-            let p=ffi::howaw_texture_create(w,h,&mut stride,&mut mapped);
+            let p=ffi::howaw_texture_create(w,h,main_ram as i32,&mut stride,&mut mapped);
             self.check()?;
-            if p.is_null() {return Err("GPU texture allocation failed".into());}
+            if p.is_null() {return Err(format!("GPU texture allocation failed main_ram={main_ram}"));}
             Ok((p,stride as usize,mapped as usize))
         }
-        #[cfg(not(target_os="vita"))] {let _=(w,h);Err(unavailable())}
+        #[cfg(not(target_os="vita"))] {let _=(w,h,main_ram);Err(unavailable())}
     }
     /// Write to the mapped allocation without an intermediate atlas-sized buffer.
     pub fn upload(&self,p:*mut c_void,src:&[u8],xywh:[usize;4],stride:usize) {

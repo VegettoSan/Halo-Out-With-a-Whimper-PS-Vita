@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdatomic.h>
+#include <stdlib.h>
 
 /* Reuse the installed library's clear GXP, with an independently owned patch.
  * Color-mask NONE is essential: vita2d_clear_screen would overwrite color. */
@@ -198,17 +199,36 @@ int howaw_color_clear_contract(unsigned int result[2]) {
     vita2d_free_texture(t);if (rc) return rc;
     return result[0]==1024 && result[1]==1024?0:-31;
 }
-void *howaw_texture_create(unsigned int w,unsigned int h,unsigned int *stride,unsigned int *mapped) {
-    vita2d_texture *t=vita2d_create_empty_texture(w,h);
-    if (!t) return NULL;
-    if (first_error) { vita2d_free_texture(t); return NULL; }
-    void *data=vita2d_texture_get_datap(t);
-    if (!data) { vita2d_free_texture(t); return NULL; }
-    *stride=vita2d_texture_get_stride(t);
+void *howaw_texture_create(unsigned int w,unsigned int h,int main_ram,unsigned int *stride,unsigned int *mapped) {
+    /* Own only allocation: reuse public vita2d texture layout/drawing/free.
+     * Its generic allocator may fall back to another pool; these budgets must
+     * instead reflect the pool actually requested, with explicit map errors. */
+    if (first_error || !w || !h || w>2048 || h>2048) return NULL;
+    unsigned int row=((w+7)&~7)*4,bytes=row*h,alignment=main_ram?4096:262144;
+    unsigned int size=(bytes+alignment-1)&~(alignment-1);
+    SceKernelFreeMemorySizeInfo free_info={0};free_info.size=sizeof(free_info);
+    if (checked(sceKernelGetFreeMemorySize(&free_info),30)<0) return NULL;
+    unsigned int available=main_ram?free_info.size_user:free_info.size_cdram;
+    if (available<size+(main_ram?16:8)*1024*1024) {checked(-32,30);return NULL;}
+    vita2d_texture *t=calloc(1,sizeof(*t));if (!t) return NULL;
+    SceKernelMemBlockType type=main_ram?SCE_KERNEL_MEMBLOCK_TYPE_USER_RW_UNCACHE:SCE_KERNEL_MEMBLOCK_TYPE_USER_CDRAM_RW;
+    int rc=sceKernelAllocMemBlock("howaw_atlas",type,size,NULL);
+    if (rc<0) {checked(rc,31);free(t);return NULL;}
+    t->data_UID=rc;void *data=NULL;int is_mapped=0;
+    rc=checked(sceKernelGetMemBlockBase(t->data_UID,&data),32);
+    if (rc>=0) {rc=checked(sceGxmMapMemory(data,size,SCE_GXM_MEMORY_ATTRIB_READ),33);is_mapped=rc>=0;}
+    if (rc>=0) {
+        memset(data,0,bytes);
+        rc=checked(sceGxmTextureInitLinear(&t->gxm_tex,data,SCE_GXM_TEXTURE_FORMAT_A8B8G8R8,w,h,0),7);
+    }
     SceKernelMemBlockInfo info={0};info.size=sizeof(info);
-    int rc=sceKernelGetMemBlockInfoByAddr(data,&info);
-    if (rc<0) { checked(rc,8); vita2d_free_texture(t); return NULL; }
-    *mapped=info.mappedSize;
+    if (rc>=0) rc=checked(sceKernelGetMemBlockInfoByAddr(data,&info),8);
+    if (rc>=0 && (info.type!=type || info.mappedBase!=data || info.mappedSize!=size)) rc=checked(-33,8);
+    if (rc<0) {
+        if (is_mapped) checked(sceGxmUnmapMemory(data),34);
+        checked(sceKernelFreeMemBlock(t->data_UID),35);free(t);return NULL;
+    }
+    *stride=row;*mapped=info.mappedSize;
     vita2d_texture_set_filters(t,SCE_GXM_TEXTURE_FILTER_POINT,SCE_GXM_TEXTURE_FILTER_POINT);
     return t;
 }

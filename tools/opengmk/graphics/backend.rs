@@ -2,14 +2,17 @@
 use super::*;
 #[path="geometry.rs"] pub mod geometry;
 #[path="native.rs"] mod native;
+#[path="residency.rs"] mod residency;
 use std::ffi::c_void;
 use geometry::Vertex;
 static FILL_DISPLAY:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);
+static RAM_UPLOAD:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);
 pub fn set_display_fill(fill:bool) {FILL_DISPLAY.store(fill,std::sync::atomic::Ordering::Relaxed);}
 pub fn display_fill()->bool {FILL_DISPLAY.load(std::sync::atomic::Ordering::Relaxed)}
+pub fn take_ram_upload()->bool {RAM_UPLOAD.swap(false,std::sync::atomic::Ordering::Relaxed)}
 
 struct Entry {rect:AtlasRect,pixels:Option<Box<[u8]>>}
-struct Page {w:i32,h:i32,texture:*mut c_void,mapped:usize}
+struct Page {w:i32,h:i32,texture:*mut c_void,mapped:usize,main_ram:bool}
 pub struct Vita2d {
     entries:Vec<Entry>, pages:Vec<Page>, device:Option<native::Device>,
     vertices:Vec<Vertex>, key:Option<(usize,u32)>, in_scene:bool,
@@ -19,7 +22,7 @@ pub struct Vita2d {
 impl Vita2d {
     pub fn from_atlases(atl:atlas::AtlasBuilder)->Self {
         let (packers,textures)=atl.into_inner();
-        let pages=packers.iter().map(|p|{let (w,h)=p.size();Page{w,h,texture:std::ptr::null_mut(),mapped:0}}).collect();
+        let pages=packers.iter().map(|p|{let (w,h)=p.size();Page{w,h,texture:std::ptr::null_mut(),mapped:0,main_ram:false}}).collect();
         let this=Self {entries:textures.into_iter().map(|(rect,pixels)|Entry{rect,pixels:Some(pixels)}).collect(),pages,
             device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,view_scale:1.,view_y_scale:1.,view_offset:[0.,0.],colors:Vec::with_capacity(1536),add:false,rectangles:0,logical:[960,544]};
         this.metrics("prepared");this
@@ -27,6 +30,8 @@ impl Vita2d {
     pub fn metrics(&self,stage:&str) {
         let pending:usize=self.entries.iter().filter_map(|e|e.pixels.as_ref()).map(|p|p.len()).sum();
         let mapped:usize=self.pages.iter().map(|p|p.mapped).sum();
+        let main:usize=self.pages.iter().filter(|p|p.main_ram).map(|p|p.mapped).sum();
+        crate::diagnostic!("[atlas-pools] stage={} cdram_bytes={} main_ram_gpu_bytes={} total_bytes={}",stage,mapped-main,main,mapped);
         crate::diagnostic!("[graphics-memory] stage={} entries={} pages={} cpu_pending_bytes={} cpu_released_bytes={} gpu_texture_mapped_bytes={} page_uploads={} sprite_submissions={} rectangle_submissions={} queued_texture_vertices={} queued_color_vertices={} batch_draws={} frames={}",
             stage,self.entries.len(),self.pages.len(),pending,self.released,mapped,self.uploads,self.sprites,self.rectangles,self.vertices.len(),self.colors.len(),self.draws,self.frames);
     }
@@ -43,10 +48,10 @@ impl Vita2d {
         if self.device.is_none(){self.device=Some(native::Device::new()?);crate::diagnostics::native_memory("gxm_initialized");}
         // Keep all CPU payloads until allocation and validation succeed; never upload a page twice.
         let p=&self.pages[page];
-        let allocated:usize=self.pages.iter().map(|p|p.mapped).sum();
-        // Four demand-loaded 16 MiB pages; do not attempt all six in CDRAM.
-        // Eviction needs recoverable backing storage, not discarded CPU pixels.
-        if allocated+p.w as usize*p.h as usize*4>64*1024*1024 {return Err("GPU atlas budget exceeded (64 MiB); recoverable eviction not implemented".into());}
+        let cdram:usize=self.pages.iter().filter(|p|!p.main_ram).map(|p|p.mapped).sum();
+        let main:usize=self.pages.iter().filter(|p|p.main_ram).map(|p|p.mapped).sum();
+        let bytes=(p.w as usize*4+31)/32*32*p.h as usize;
+        let main_ram=residency::main_ram_for(cdram,main,bytes)?;
         for e in self.entries.iter().filter(|e|e.rect.atlas_id as usize==page) {
             let r=e.rect;
             if r.x<0 || r.y<0 || r.w<=0 || r.h<=0 || r.x+r.w>p.w || r.y+r.h>p.h || e.pixels.as_ref().map(|x|x.len())!=Some(r.w as usize*r.h as usize*4) {
@@ -54,15 +59,19 @@ impl Vita2d {
             }
         }
         let device=self.device.as_ref().unwrap();
-        let (texture,stride,mapped)=device.texture(p.w as u32,p.h as u32)?;
+        let start=std::time::Instant::now();
+        let (texture,stride,mapped)=device.texture(p.w as u32,p.h as u32,main_ram)?;
         if stride<p.w as usize*4 || mapped<stride*p.h as usize {device.free(texture);return Err("GPU stride/allocation bounds invalid".into());}
+        if !residency::fits(cdram,main,mapped,main_ram) {device.free(texture);return Err("actual mapped atlas allocation exceeds pool budget".into());}
         for e in self.entries.iter().filter(|e|e.rect.atlas_id as usize==page) {
             let r=e.rect;device.upload(texture,e.pixels.as_ref().unwrap(),[r.x as _,r.y as _,r.w as _,r.h as _],stride);
         }
         for e in self.entries.iter_mut().filter(|e|e.rect.atlas_id as usize==page) {
             self.released+=e.pixels.take().unwrap().len();
         }
-        self.pages[page].texture=texture;self.pages[page].mapped=mapped;self.uploads+=1;
+        self.pages[page].texture=texture;self.pages[page].mapped=mapped;self.pages[page].main_ram=main_ram;self.uploads+=1;
+        if main_ram {RAM_UPLOAD.store(true,std::sync::atomic::Ordering::Relaxed);}
+        crate::diagnostic!("[atlas-upload] page={} pool={} mapped_bytes={} elapsed_us={} duplicate_copy=false",page,if main_ram{"main_uncached"}else{"cdram"},mapped,start.elapsed().as_micros());
         self.metrics("page_uploaded");crate::heap_meter::snapshot("page_uploaded");crate::diagnostics::native_memory("page_uploaded");Ok(())
     }
     fn flush(&mut self)->Result<(),String> {

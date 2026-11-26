@@ -17,7 +17,7 @@ def extend_graphics(root):
         missing.append(sig+' { crate::host::unavailable(crate::host::Service::Graphics,"'+m[1]+'") }')
     backend=backend.replace('// REQUIRED_UNSUPPORTED','\n'.join(missing))
     (src/'render/vita2d.rs').write_text(backend,encoding='utf-8')
-    for name in ['geometry.rs','native.rs']:
+    for name in ['geometry.rs','native.rs','residency.rs']:
         shutil.copyfile(own/name,src/'render'/name)
     shutil.copyfile(own/'vita2d_bridge.c',src/'render/vita2d_bridge.c')
     p=src/'render.rs';s=p.read_text(encoding='utf-8')
