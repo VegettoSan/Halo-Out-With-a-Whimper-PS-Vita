@@ -1,6 +1,9 @@
 use gm8emulator::{audio_source::{Source,SampleRate,ChannelCount},audio_wav::WavPlayer,audio_resampler::Resampler,audio_rechanneler::Rechanneler,audio_cycle::Cycle,game::audio::{mixer::Mixer,SoundParams,native_output::{NativeOutput,pcm16}}};
 use std::sync::{Arc,atomic::AtomicU32};
 fn main() {
+    let mut bins=[0usize;129];bins[1]=2;bins[12]=6;bins[88]=2;
+    assert_eq!(gm8emulator::game::audio::native_output::histogram_quantiles(&bins,90000),(10,12999,88999));
+    bins=[0;129];bins[128]=1;assert_eq!(gm8emulator::game::audio::native_output::histogram_quantiles(&bins,300000),(1,300000,300000));
     assert_eq!(std::mem::align_of::<gm8emulator::game::audio::native_output::PcmBlock>(),64);
     assert_eq!(std::mem::size_of::<gm8emulator::game::audio::native_output::PcmBlock>(),4096);
     let dir=std::env::args_os().nth(2).expect("new private diagnostic directory required");gm8emulator::diagnostics::open(std::path::Path::new(&dir)).unwrap();

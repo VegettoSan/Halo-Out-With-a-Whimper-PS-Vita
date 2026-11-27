@@ -2,7 +2,13 @@
 use super::mixer::Mixer;
 use crate::audio_source::Source;
 use std::sync::{Arc,atomic::{AtomicBool,AtomicI32,AtomicUsize,Ordering}};
-#[derive(Default)] struct Counters {blocks:AtomicUsize,nonzero:AtomicUsize,clips:AtomicUsize,max_us:AtomicUsize}
+struct Histogram {counts:[usize;129],max:u64}
+impl Default for Histogram {fn default()->Self{Self{counts:[0;129],max:0}}}
+pub fn histogram_quantiles(counts:&[usize;129],max:u64)->(usize,u64,u64) {
+    let n:usize=counts.iter().sum();if n==0{return(0,0,0);}
+    let q=|percent:usize| {let target=(n*percent+99)/100;let mut sum=0;for (i,count) in counts.iter().enumerate(){sum+=count;if sum>=target{return if i==128{max}else{((i as u64+1)*1000-1).min(max)};}}max};(n,q(50),q(95))
+}
+#[derive(Default)] struct Counters {blocks:AtomicUsize,nonzero:AtomicUsize,clips:AtomicUsize,max_us:AtomicUsize,histogram:std::sync::Mutex<Histogram>}
 #[repr(align(64))] pub struct PcmBlock(pub [i16;2048]);
 pub struct NativeOutput {stop:Arc<AtomicBool>,error:Arc<AtomicI32>,stats:Arc<Counters>,thread:Option<std::thread::JoinHandle<()>>}
 #[cfg(target_os="vita")] extern "C" {
@@ -43,7 +49,8 @@ impl NativeOutput {
                     let n=mixer.write_samples(&mut floats);
                     if n!=floats.len(){failed.store(-1001,Ordering::Release);break;}
                     let (nz,clipped)=match pcm16(&floats,&mut pcm[buffer_index].0){Ok(v)=>v,Err(e)=>{crate::diagnostic!("AUDIO_PCM_FAIL {}",e);failed.store(-1002,Ordering::Release);break;}};
-                    max_us=max_us.max(start.elapsed().as_micros());
+                    let mix_us=start.elapsed().as_micros();max_us=max_us.max(mix_us);
+                    {let mut h=match counters.histogram.lock(){Ok(h)=>h,Err(_)=>{failed.store(-1003,Ordering::Release);break;}};h.counts[(mix_us as usize/1000).min(128)]+=1;h.max=h.max.max(mix_us as u64);}
                     let rc=sceAudioOutOutput(port,pcm[buffer_index].0.as_ptr());if rc<0{failed.store(rc,Ordering::Release);break;}
                     buffer_index^=1; // Do not overwrite the buffer still queued for the device.
                     blocks+=1;nonzero+=nz as u64;clips+=clipped as u64;
@@ -67,6 +74,10 @@ impl NativeOutput {
         Ok(())
     }
     pub fn metrics(&self) {
+        if let Ok(mut h)=self.stats.histogram.lock() {
+            let window=std::mem::take(&mut *h);drop(h);let(n,p50,p95)=histogram_quantiles(&window.counts,window.max);
+            crate::diagnostic!("[audio-window] blocks={} mix_convert_p50_upper_us={} mix_convert_p95_upper_us={} mix_convert_peak_us={} bucket_us=1000 output_wait_excluded=true; asynchronous wall samples",n,p50,p95,window.max);
+        } else {crate::diagnostic!("AUDIO_PROFILE_FAIL histogram mutex poisoned");}
         let blocks=self.stats.blocks.load(Ordering::Acquire);
         crate::diagnostic!("[audio-output] blocks={} submitted_pcm_samples={} nonzero_pcm_samples={} clipped_samples={} max_mix_convert_us={} error={}; audible observation separate",blocks,blocks*2048,self.stats.nonzero.load(Ordering::Acquire),self.stats.clips.load(Ordering::Acquire),self.stats.max_us.load(Ordering::Acquire),self.error.load(Ordering::Acquire));
     }
