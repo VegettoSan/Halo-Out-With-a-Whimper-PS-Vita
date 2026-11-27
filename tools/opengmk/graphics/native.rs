@@ -18,6 +18,9 @@ mod ffi {
         pub fn howaw_gxm_draw_calls()->u32;
         pub fn howaw_pool_peak()->u32;
         pub fn howaw_present_times(out:*mut u32);
+        pub fn howaw_native_counters(out:*mut u32);
+        pub fn howaw_wait_all()->i32;
+        pub fn howaw_set_baseline(value:i32);
         pub fn howaw_pool_failed_request()->u32;
         pub fn howaw_pool_failed_free()->u32;
         pub fn howaw_texture_create(w:u32,h:u32,main_ram:i32,stride:*mut u32,mapped:*mut u32)->*mut c_void;
@@ -40,6 +43,14 @@ mod ffi {
 }
 fn unavailable()->String {"SERVICE_UNAVAILABLE/Graphics: requires physical Vita GXM".into()}
 impl Device {
+    pub fn counters(&self)->[u32;3] {
+        #[cfg(target_os="vita")] unsafe {let mut v=[0;3];ffi::howaw_native_counters(v.as_mut_ptr());v}
+        #[cfg(not(target_os="vita"))] {[0;3]}
+    }
+    pub fn drain(&self)->Result<(),String> {
+        #[cfg(target_os="vita")] unsafe {let rc=ffi::howaw_wait_all();if rc!=0{return Err(format!("GPU/display drain rc={rc}"));}self.check()}
+        #[cfg(not(target_os="vita"))] {Err(unavailable())}
+    }
     pub fn tinted(&self,p:*mut c_void,v:&[super::tint::TintVertex],add:bool)->Result<(),String> {
         #[cfg(target_os="vita")] unsafe {let rc=ffi::howaw_draw_tinted(p,v.as_ptr(),v.len() as u32,add as i32);if rc!=0 {return Err(format!("per-vertex draw rc={rc}"));}self.check()}
         #[cfg(not(target_os="vita"))] {let _=(p,v,add);Err(unavailable())}
@@ -50,6 +61,7 @@ impl Device {
     }
     pub fn new()->Result<Self,String> {
         #[cfg(target_os="vita")] unsafe {
+            #[cfg(feature="howaw_perf")] ffi::howaw_set_baseline(crate::performance::baseline() as i32);
             let rc=ffi::howaw_graphics_init();
             crate::diagnostic!("[graphics-init] libvita2d/GXM rc={} pool_bytes=1048576 msaa=none",rc);
             if rc!=0 {return Err(format!("graphics init error={rc}"));}
@@ -134,14 +146,14 @@ impl Device {
         #[cfg(target_os="vita")] unsafe {ffi::howaw_viewport(x,y,w,h);self.check()}
         #[cfg(not(target_os="vita"))] {let _=(x,y,w,h);Err(unavailable())}
     }
-    pub fn wait(&self) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_wait_rendering_done();}}
+    pub fn wait(&self) {#[cfg(target_os="vita")] {if let Err(e)=self.drain(){crate::diagnostic!("GRAPHICS_CLEANUP_FAIL {}",e);}}}
     pub fn end_without_present(&self)->Result<(),String> {
         #[cfg(target_os="vita")] unsafe {ffi::vita2d_end_drawing();self.check()}
         #[cfg(not(target_os="vita"))] {Err(unavailable())}
     }
     pub fn free(&self,p:*mut c_void) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_free_texture(p);} #[cfg(not(target_os="vita"))] {let _=p;}}
 }
-impl Drop for Device {fn drop(&mut self) {#[cfg(target_os="vita")] unsafe {ffi::vita2d_wait_rendering_done();ffi::howaw_depth_fini();ffi::vita2d_fini();}}}
+impl Drop for Device {fn drop(&mut self) {#[cfg(target_os="vita")] unsafe {let rc=ffi::howaw_wait_all();if rc!=0 {crate::diagnostic!("GRAPHICS_CLEANUP_FAIL rc={}",rc);}ffi::howaw_depth_fini();ffi::vita2d_fini();}}}
 
 pub fn readback(clear:u32)->Result<(),String> {
     capture(clear,true)
@@ -151,6 +163,7 @@ pub fn readback(clear:u32)->Result<(),String> {
 pub fn inspect_original_frame()->Result<(),String> {capture(0xff000000,false)}
 fn capture(clear:u32,require_change:bool)->Result<(),String> {
     #[cfg(target_os="vita")] unsafe {
+        let rc=ffi::howaw_wait_all();if rc!=0 {return Err(format!("capture drain rc={rc}"));}
         let p=ffi::vita2d_get_current_fb();
         if p.is_null(){return Err("framebuffer pointer unavailable".into());}
         let bytes=std::slice::from_raw_parts(p,960*544*4);

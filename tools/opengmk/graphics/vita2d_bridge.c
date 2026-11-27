@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <psp2/kernel/processmgr.h>
 static unsigned int gpu_wait_us,display_wait_us,gpu_wait_peak,display_wait_peak;
+static int baseline_presentation;
+void howaw_set_baseline(int value) {baseline_presentation=value!=0;}
 void howaw_present_times(unsigned int out[4]) {out[0]=gpu_wait_us;out[1]=display_wait_us;out[2]=gpu_wait_peak;out[3]=display_wait_peak;}
 
 /* Reuse the installed library's clear GXP, with an independently owned patch.
@@ -22,6 +24,18 @@ static void tint_fini(void);
 
 static atomic_int first_error, error_api;
 static atomic_uint draw_calls;
+static atomic_uint shader_changes,texture_changes;
+static int checked(int rc,int api);
+static const SceGxmVertexProgram *last_vp;
+static const SceGxmFragmentProgram *last_fp;
+static const SceGxmTexture *last_texture;
+void howaw_native_counters(unsigned int out[3]) {out[0]=draw_calls;out[1]=shader_changes;out[2]=texture_changes;}
+void __real_sceGxmSetVertexProgram(SceGxmContext *,const SceGxmVertexProgram *);
+void __wrap_sceGxmSetVertexProgram(SceGxmContext *c,const SceGxmVertexProgram *p) {if (p!=last_vp){shader_changes++;last_vp=p;}__real_sceGxmSetVertexProgram(c,p);}
+void __real_sceGxmSetFragmentProgram(SceGxmContext *,const SceGxmFragmentProgram *);
+void __wrap_sceGxmSetFragmentProgram(SceGxmContext *c,const SceGxmFragmentProgram *p) {if (p!=last_fp){shader_changes++;last_fp=p;}__real_sceGxmSetFragmentProgram(c,p);}
+int __real_sceGxmSetFragmentTexture(SceGxmContext *,unsigned int,const SceGxmTexture *);
+int __wrap_sceGxmSetFragmentTexture(SceGxmContext *c,unsigned int index,const SceGxmTexture *t) {int rc=checked(__real_sceGxmSetFragmentTexture(c,index,t),47);if (rc>=0 && t!=last_texture){texture_changes++;last_texture=t;}return rc;}
 #define HOWAW_POOL_BYTES (1024u*1024u)
 static unsigned int pool_peak,pool_failed_request,pool_failed_free;
 unsigned int howaw_pool_peak(void) {return pool_peak;}
@@ -173,6 +187,7 @@ int __wrap_sceGxmShaderPatcherCreateFragmentProgram(SceGxmShaderPatcher *p,SceGx
 
 int howaw_graphics_init(void) {
     first_error=error_api=0; draw_calls=0;
+    shader_changes=texture_changes=0;last_vp=NULL;last_fp=NULL;last_texture=NULL;
     pool_peak=pool_failed_request=pool_failed_free=0;
     int rc=vita2d_init_advanced(HOWAW_POOL_BYTES);
     if (first_error) return first_error;
@@ -270,14 +285,20 @@ int howaw_draw_lines(const vita2d_color_vertex *v,unsigned int n) {
     vita2d_draw_array(SCE_GXM_PRIMITIVE_LINES,gpu,n);pool_measure();return first_error;
 }
 int howaw_finish_frame(void) {
+    gpu_wait_us=display_wait_us=0;
     uint64_t start=sceKernelGetProcessTimeWide();
     vita2d_end_drawing();vita2d_wait_rendering_done();
     gpu_wait_us=(unsigned int)(sceKernelGetProcessTimeWide()-start);if (gpu_wait_us>gpu_wait_peak) gpu_wait_peak=gpu_wait_us;
     if (first_error) return first_error;
     start=sceKernelGetProcessTimeWide();
     vita2d_swap_buffers();
-    checked(sceGxmDisplayQueueFinish(),9);
+    if (baseline_presentation) checked(sceGxmDisplayQueueFinish(),9);
+    /* Stock vita2d_swap_buffers enqueues a bounded display entry and rotates
+     * buffers with GXM sync objects. Do not drain that queue every frame.
+     * Retain GPU completion above: its single vertex pool must not be reused
+     * while GPU work is in flight. Capture/exit drain explicitly below. */
     display_wait_us=(unsigned int)(sceKernelGetProcessTimeWide()-start);if(display_wait_us>display_wait_peak) display_wait_peak=display_wait_us;
     return first_error;
 }
+int howaw_wait_all(void) {vita2d_wait_rendering_done();checked(sceGxmDisplayQueueFinish(),9);return first_error;}
 #include "vertex_tint.c"

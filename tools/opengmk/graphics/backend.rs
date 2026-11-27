@@ -4,6 +4,7 @@ use super::*;
 #[path="native.rs"] mod native;
 #[path="residency.rs"] mod residency;
 #[path="tint.rs"] mod tint;
+#[path="tint_reference.rs"] mod tint_reference;
 use std::ffi::c_void;
 use geometry::Vertex;
 static FILL_DISPLAY:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);
@@ -20,13 +21,18 @@ pub struct Vita2d {
     draws:u64, sprites:u64, uploads:u64, frames:u64, released:usize,culled:u64,
     view_scale:f64, view_y_scale:f64, view_offset:[f64;2], colors:Vec<geometry::ColorVertex>, add:bool, rectangles:u64, logical:[u32;2],
     circle_precision:i32,
+    tinted:Vec<tint::TintVertex>,submitted_vertices:u64,state_requests:u64,state_changes:u64,tint_calls:u64,
 }
 impl Vita2d {
+    fn baseline()->bool {
+        #[cfg(feature="howaw_perf")] {crate::performance::baseline()}
+        #[cfg(not(feature="howaw_perf"))] {false}
+    }
     pub fn from_atlases(atl:atlas::AtlasBuilder)->Self {
         let (packers,textures)=atl.into_inner();
         let pages=packers.iter().map(|p|{let (w,h)=p.size();Page{w,h,texture:std::ptr::null_mut(),mapped:0,main_ram:false}}).collect();
         let this=Self {entries:textures.into_iter().map(|(rect,pixels)|Entry{rect,pixels:Some(pixels)}).collect(),pages,
-            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,culled:0,view_scale:1.,view_y_scale:1.,view_offset:[0.,0.],colors:Vec::with_capacity(1536),add:false,rectangles:0,logical:[960,544],circle_precision:24};
+            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,culled:0,view_scale:1.,view_y_scale:1.,view_offset:[0.,0.],colors:Vec::with_capacity(1536),add:false,rectangles:0,logical:[960,544],circle_precision:24,tinted:Vec::with_capacity(270),submitted_vertices:0,state_requests:0,state_changes:0,tint_calls:0};
         this.metrics("prepared");this
     }
     pub fn metrics(&self,stage:&str) {
@@ -82,12 +88,12 @@ impl Vita2d {
         if self.vertices.is_empty() && self.colors.is_empty(){return Ok(());}
         if !self.in_scene{return Err("draw batch outside scene".into());}
         if !self.colors.is_empty() {
-            self.device.as_ref().unwrap().colors(&self.colors)?;self.colors.clear();self.draws+=1;
+            self.device.as_ref().unwrap().colors(&self.colors)?;self.submitted_vertices+=self.colors.len() as u64;self.colors.clear();self.draws+=1;
             return Ok(());
         }
         let (page,col)=self.key.unwrap();
         self.device.as_ref().unwrap().draw(self.pages[page].texture,&self.vertices,col)?;
-        self.draws+=1;self.vertices.clear();Ok(())
+        self.submitted_vertices+=self.vertices.len() as u64;self.draws+=1;self.vertices.clear();Ok(())
     }
     fn checked(result:Result<(),String>) {if let Err(e)=result{crate::diagnostic!("GRAPHICS_FAIL {}",e);panic!("GRAPHICS_FAIL {}",e);}}
     fn queue_sprite(&mut self,v:&mut [Vertex],key:(usize,u32)) {
@@ -99,7 +105,11 @@ impl Vita2d {
         if v.is_empty(){return;}if !self.in_scene {panic!("GRAPHICS_FAIL shape outside scene");}
         if !self.vertices.is_empty() || lines || self.colors.len()+v.len()>1536 {Self::checked(self.flush());}
         for p in &mut v {p.x=(f64::from(p.x)*self.view_scale+self.view_offset[0]) as f32;p.y=(f64::from(p.y)*self.view_y_scale+self.view_offset[1]) as f32;}
-        if lines {Self::checked(self.device.as_ref().unwrap().lines(&v));self.draws+=1;}else{self.colors.extend_from_slice(&v);}
+        if lines {Self::checked(self.device.as_ref().unwrap().lines(&v));self.submitted_vertices+=v.len() as u64;self.draws+=1;}else{self.colors.extend_from_slice(&v);}
+    }
+    fn counters(&self)->[u64;10] {
+        let n=self.device.as_ref().map(|d|d.counters()).unwrap_or([0;3]);
+        [self.sprites,self.culled,self.draws,self.submitted_vertices,n[0] as u64,n[1] as u64,n[2] as u64,self.state_requests,self.state_changes,self.tint_calls]
     }
 }
 impl Drop for Vita2d {
@@ -127,7 +137,8 @@ impl RendererTrait for Vita2d {
     fn get_blend_mode(&self)->(BlendType,BlendType) {(BlendType::SrcAlpha,if self.add{BlendType::One}else{BlendType::InvSrcAlpha})}
     fn set_blend_mode(&mut self,src:BlendType,dst:BlendType) {
         if src!=BlendType::SrcAlpha || !matches!(dst,BlendType::One|BlendType::InvSrcAlpha) {crate::host::unavailable(crate::host::Service::Graphics,"blend_factors");}
-        Self::checked(self.flush());let add=dst==BlendType::One;
+        self.state_requests+=1;let add=dst==BlendType::One;if self.add==add && !Self::baseline(){return;}self.state_changes+=u64::from(self.add!=add);
+        Self::checked(self.flush());
         if let Some(d)=&self.device {Self::checked(d.blend(add));}
         self.add=add;crate::diagnostic!("[graphics-blend] src={:?} dst={:?}",src,dst);
     }
@@ -150,7 +161,7 @@ impl RendererTrait for Vita2d {
         if outline {
             Self::checked(self.flush());let mut v=geometry::rectangle_outline(x1,y1,x2,y2,[c1,c2,c3,c4],alpha);
             for v in &mut v {v.x=(f64::from(v.x)*self.view_scale+self.view_offset[0]) as f32;v.y=(f64::from(v.y)*self.view_y_scale+self.view_offset[1]) as f32;}
-            Self::checked(self.device.as_ref().unwrap().lines(&v));self.draws+=1;self.rectangles+=1;
+            Self::checked(self.device.as_ref().unwrap().lines(&v));self.submitted_vertices+=v.len() as u64;self.draws+=1;self.rectangles+=1;
             {static ONCE:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);if !ONCE.swap(true,std::sync::atomic::Ordering::Relaxed) {crate::diagnostic!("[graphics-outline] closed=true vertices=8 native_line_width=1; scaled raster parity unverified");}}
             return;
         }
@@ -169,14 +180,16 @@ impl RendererTrait for Vita2d {
         let origin=if use_origin{[r.origin_x as f64,r.origin_y as f64]}else{[0.,0.]};
         let p=&self.pages[page];
         let atlas=[r.x as f64,r.y as f64,p.w as f64,p.h as f64];let part=[part_x,part_y,part_w,part_h];
+        if !Self::baseline() && angle==0. && geometry::outside_axis_sprite(origin,[part_w,part_h],[x,y],[xscale,yscale],[self.view_scale,self.view_y_scale],self.view_offset) {self.culled+=1;return;}
         let mut normal=geometry::quad(origin,part,[x,y],[xscale,yscale],angle,atlas);
         if geometry::outside_view(&normal,[self.view_scale,self.view_y_scale],self.view_offset) {self.culled+=1;return;}
         if !self.colors.is_empty() {Self::checked(self.flush());}
         Self::checked(self.resident(page));let key=(page,geometry::tint(col1,alpha));
         if col1!=col2 || col1!=col3 || col1!=col4 {
-            Self::checked(self.flush());let mut v=tint::vertices(origin,part,[x,y],[xscale,yscale],angle,atlas,[r.w as f64,r.h as f64],[col1,col2,col3,col4],alpha);
-            for v in &mut v {v.x=(f64::from(v.x)*self.view_scale+self.view_offset[0]) as f32;v.y=(f64::from(v.y)*self.view_y_scale+self.view_offset[1]) as f32;}
-            Self::checked(self.device.as_ref().unwrap().tinted(self.pages[page].texture,&v,self.add));self.sprites+=1;self.draws+=1;
+            Self::checked(self.flush());let mut reference;
+            let v=if Self::baseline(){reference=tint_reference::vertices(origin,part,[x,y],[xscale,yscale],angle,atlas,[r.w as f64,r.h as f64],[col1,col2,col3,col4],alpha);&mut reference}else{tint::vertices_into(&mut self.tinted,origin,part,[x,y],[xscale,yscale],angle,atlas,[r.w as f64,r.h as f64],[col1,col2,col3,col4],alpha);&mut self.tinted};
+            for v in v.iter_mut() {v.x=(f64::from(v.x)*self.view_scale+self.view_offset[0]) as f32;v.y=(f64::from(v.y)*self.view_y_scale+self.view_offset[1]) as f32;}
+            Self::checked(self.device.as_ref().unwrap().tinted(self.pages[page].texture,v,self.add));self.submitted_vertices+=v.len() as u64;self.tint_calls+=1;self.sprites+=1;self.draws+=1;
             {static ONCE:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);if !ONCE.swap(true,std::sync::atomic::Ordering::Relaxed) {crate::diagnostic!("[graphics-per-vertex] vertices={} native_texture_times_interpolated_color=true",v.len());}}return;
         }
         if part_x<0. || part_y<0. || part_w<0. || part_h<0. || part_x+part_w>r.w as f64 || part_y+part_h>r.h as f64 {
@@ -227,6 +240,8 @@ impl RendererTrait for Vita2d {
 }
 
 impl Renderer {
+    pub fn performance_counters(&self)->[u64;10] {self.0.as_any().downcast_ref::<Vita2d>().unwrap().counters()}
+    pub fn graphics_drain(&self)->Result<(),String> {if let Some(d)=&self.0.as_any().downcast_ref::<Vita2d>().unwrap().device {d.drain()}else{Ok(())}}
     pub fn graphics_resource(&self,id:AtlasRef)->Result<(),String> {self.0.as_any().downcast_ref::<Vita2d>().ok_or("wrong renderer")?.resource(id)}
     pub fn graphics_metrics(&self,stage:&str) {self.0.as_any().downcast_ref::<Vita2d>().expect("Vita2d renderer").metrics(stage);}
 }

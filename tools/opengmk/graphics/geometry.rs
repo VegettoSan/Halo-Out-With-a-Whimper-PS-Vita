@@ -43,6 +43,11 @@ pub fn outside_view(v:&[Vertex],scale:[f64;2],offset:[f64;2])->bool {
     let x=|v:&Vertex|f64::from(v.x)*scale[0]+offset[0];let y=|v:&Vertex|f64::from(v.y)*scale[1]+offset[1];
     !v.is_empty() && (v.iter().all(|v|x(v)< -1.) || v.iter().all(|v|x(v)>961.) || v.iter().all(|v|y(v)< -1.) || v.iter().all(|v|y(v)>545.))
 }
+pub fn outside_axis_sprite(origin:[f64;2],size:[f64;2],pos:[f64;2],scale:[f64;2],view:[f64;2],offset:[f64;2])->bool {
+    let w=size[0]*scale[0];let h=size[1]*scale[1];let l=-w*origin[0]-0.5;let t=-h*origin[1]-0.5;
+    let x=[pos[0]+l,pos[0]+(l+w)].map(|v|f64::from(v as f32)*view[0]+offset[0]);let y=[pos[1]+t,pos[1]+(t+h)].map(|v|f64::from(v as f32)*view[1]+offset[1]);
+    x.iter().all(|v|*v< -1.) || x.iter().all(|v|*v>961.) || y.iter().all(|v|*v< -1.) || y.iter().all(|v|*v>545.)
+}
 pub fn display_port(w:u32,h:u32,fill:bool)->[f64;4] {
     if fill {[0.,0.,960.,544.]}else{let(s,o)=aspect_view(w,h);[o[0],o[1],w as f64*s,h as f64*s]}
 }
@@ -56,7 +61,7 @@ pub fn quad(origin:[f64;2], part:[f64;4], position:[f64;2], scale:[f64;2],
             angle:f64, atlas:[f64;4])->[Vertex;6] {
     let [px,py,pw,ph]=part;
     let [ax,ay,aw,ah]=atlas;
-    let (sin,cos)=(-angle.to_radians()).sin_cos();
+    let (sin,cos)=if angle==0. {(-angle,1.)}else{(-angle.to_radians()).sin_cos()};
     let left=-pw*scale[0]*origin[0]-0.5;
     let top=-ph*scale[1]*origin[1]-0.5;
     let corners=[(left,top,px,py),(left+pw*scale[0],top,px+pw,py),
