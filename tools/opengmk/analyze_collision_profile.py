@@ -5,8 +5,9 @@ from pathlib import Path
 
 def numbers(s):return {k:int(v) for k,v in re.findall(r'(\w+)=(-?\d+)',s)}
 def analyze(path):
-    rows=[];calibration=[];benches={};context={}
+    rows=[];calibration=[];benches={};context={};reference=None
     for line in path.read_text(encoding='utf-8').splitlines():
+        if '[collision-policy]' in line:reference=re.search(r'reference=(true|false)',line)[1]=='true'
         if '[collision-window]' in line:context=numbers(line)
         if '[collision-method]' in line:
             r=numbers(line);r.update(context);r['kind']=re.search(r'kind=(\w+)',line)[1];r['stage']=re.search(r'stage=(\S+)',line)[1]
@@ -20,7 +21,7 @@ def analyze(path):
         if 'DETAIL_BENCH label=' in line:
             r=numbers(line);label=re.search(r'label=(\w+)',line)[1];r['reduction_percent']=100*(1-r['after_us']/r['before_us']);benches.setdefault(label,[]).append(r)
     summary={k:{'rounds':len(v),'calls_per_round':v[0]['calls'],'before_median_us':statistics.median(r['before_us'] for r in v),'after_median_us':statistics.median(r['after_us'] for r in v),'paired_reduction_median_percent':statistics.median(r['reduction_percent'] for r in v),'paired_reduction_range_percent':[min(r['reduction_percent'] for r in v),max(r['reduction_percent'] for r in v)]} for k,v in benches.items()}
-    return {'methods':rows,'calibration':calibration,'benchmarks':summary,'methodology':'Generated CPU scenarios are not native Firefight frequency. Per-method sampled wall times are inclusive and overlap for nested calls; never sum or claim CPU cycles. Sampling uses first call plus hashed~1/128. Calibration loop differences include noise/scheduling; not subtracted from frame metrics. Benchmark percentages are medians of paired trial reductions; unpaired median ratio can mislead. Negative reduction is a regression, not suppressed.'}
+    return {'collision_reference_mode':reference,'methods':rows,'calibration':calibration,'benchmarks':summary,'methodology':'Generated CPU scenarios are not native Firefight frequency. Per-method sampled wall times are inclusive and overlap for nested calls; never sum or claim CPU cycles. Sampling uses first call plus hashed~1/128. Native windows follow global60-frame checkpoints, may include scene handling outside Game::frame, and are not necessarily aligned with per-room perf windows; skip startup/transition intervals. Calibration loop differences include noise/scheduling; not subtracted from frame metrics. Benchmark percentages are medians of paired trial reductions; unpaired median ratio can mislead. Negative reduction is a regression, not suppressed.'}
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('log',type=Path);p.add_argument('--output',type=Path,required=True);a=p.parse_args();root=Path(__file__).resolve().parents[2]/'reports/local'
