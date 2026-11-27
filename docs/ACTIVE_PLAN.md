@@ -1,16 +1,14 @@
-# Active work — E032 sustained gameplay and measured performance
+# Active work — collision cost after verified E032
 
-Historical stages and artifacts: OPENGMK_RUNTIME_PROGRESS.md / EXPERIMENTS.md.
+Current evidence: [performance report](OPENGMK_PERFORMANCE_PROBE.md). Historical stages remain in EXPERIMENTS.md.
 
-- [x] Retrieve E031 physical log and installed SELF/SFO before changes. HOWAW1178/00.32 verified; closure is cumulative diagnostic instruction cap1,000,000, panic at1,000,001. Not frame2700, GXM, audio or memory failure.
-- [x] Baseline sparse samples: upper-median residual main-thread wall1.317ms menu /37.320ms room6; separate GPU/display waits available. No old object/phase distributions: GML-versus-render cause unresolved.
-- [x] Explicit5million AST-instruction watchdog per frame after successful init; preserve original VM and2700-frame diagnostic bound. Guard/flag PC contract PASS.
-- [x] Bounded exclusive phase windows, object/render/heap/audio counters; Game::frame byte-identical, audit22/22 timing-only event/collision/VM probes PASS.
-- [x] Tint scratch/fixed arrays, redundant-state flush avoidance and earlier conservative culling.2000 baseline-equivalent geometry cases PASS;475,000→0 allocations per5000-call CPU benchmark, no native FPS claim.
-- [x] Installed libvita2d queue/sync audit; retain GPU lifetime fence, explicit drain on capture/exit/unwind. Native correctness/performance still requires hardware.
-- [x] Final PC/ARM/C-Werror regressions; one private HOWAW1178/00.33 e032-ed8caf61.vpk transferred/hash verified. Baseline flag active; same binary supports both modes, no reinstall needed between runs.
-- [ ] Retrieve E032 baseline log/installed SELF/SFO, classify termination and full low/high-load windows. Archive only own diagnostic flag to activate optimized mode.
-- [ ] Owner repeats same character/room6/route with optimized mode; retrieve and compare objects/instructions/visible draws, exclusive timings/audio/memory. Do not infer global quantiles or controlled speedup from unmatched live gameplay.
-- [ ] Target dominant measured CPU/GPU/diagnostic stage or first real service/fault. No original AI/collision/event changes without faithful contracts and measured need.
+- [x] E031 latest physical log/installed identity analyzed before code. Cause: inherited cumulative AST diagnostic cap, not2700-frame normal exit or observed graphics/audio/memory failure.
+- [x] E032 one HOWAW1178/00.33 e032-ed8caf61.vpk, baseline and optimized same-binary physical runs each2700 frames/exit0, cumulative>1million, native pools restored/audio errors0. Owned baseline flag archived; installed mode is optimized.
+- [x] Exclusive timings and geometry/allocation/state/queue changes validated. Early comparable arena processing49.982→43.571ms p50; combat still~100ms with collision dominant. No stable30Hz/FPS claim or phase completion.
+- [x] E033 CPU/ARM cached-box candidate:20000 result+bbox-side-effect cases PASS, original fallback preserved, delta audit25/25, integrated CPU kernel~7–11% faster. No second VPK; candidate is not included in installed00.33.
+- [ ] Measure collision-method mix (pair/point/line/rectangle/ellipse/solid/any), cached-box rejection rate and native profiler overhead. Preserve original iteration order and dynamic invalidation; distinguish helper cost from collision-event GML spikes.
+- [ ] Use those measurements to select a further faithful optimization. Cached-box candidate source is local-tools/collision-20261126/OpenGMK; it still carries E032 markers and must receive a new diagnostic identity before any future packaging. Never overwrite00.33/older artifacts.
+- [ ] Next separately versioned device experiment: same character/room6 low/high combat load, original30Hz frame loop, explicit bound/exit classification; compare original candidate toggles with method counts and calibrated instrumentation. Do not generate another VPK in the completed E032 comparison round.
+- [ ] Confirm remaining coverage explicitly: customization regression in new revision if not established, additional rooms, long play beyond2700frames, suspend/resume and persistence. Pixel read/dynamic texture/arbitrary state services remain honest boundaries if requested.
 
-Direct main; no branches, originals/builds/data preserved. Same original30Hz simulation; no disabled objects/events/AI/collisions or fabricated FPS. Latest proven E031 combat proceeds until diagnostic cap; E032 physical A/B pending. [Measurements, protocol and exact next test](OPENGMK_PERFORMANCE_PROBE.md).
+Direct main; originals/builds/local data preserved. No disabled AI/collisions/events/projectiles, altered GML/resources or room_speed change. Route B/original OpenGMK VM + native libvita2d/GXM remains best supported; full Firefight parity and performance are incomplete.
