@@ -14,12 +14,12 @@ def main():
  p=argparse.ArgumentParser(description=__doc__)
  mode=p.add_mutually_exclusive_group(required=True);mode.add_argument('--prepare',action='store_true');mode.add_argument('--package',action='store_true')
  p.add_argument('--elf',type=Path);p.add_argument('--velf',type=Path);p.add_argument('--output',type=Path,required=True);p.add_argument('--title-id');p.add_argument('--app-version',default='00.19')
- p.add_argument('--wsl-distro',default='Ubuntu');p.add_argument('--sdk',default='/usr/local/vitasdk-hardfp');p.add_argument('--experiment',choices=['E019','E020','E021','E022','E023','E024','E025','E026','E027','E028','E029','E030','E031','E032'],default='E019');a=p.parse_args()
+ p.add_argument('--wsl-distro',default='Ubuntu');p.add_argument('--sdk',default='/usr/local/vitasdk-hardfp');p.add_argument('--experiment',choices=['E019','E020','E021','E022','E023','E024','E025','E026','E027','E028','E029','E030','E031','E032','E034'],default='E019');a=p.parse_args()
  root=Path(__file__).resolve().parents[2];out=a.output.resolve()
  if not out.is_relative_to(root/'build'):p.error('private output must stay under ignored build/')
  if not re.fullmatch(r'\d{2}\.\d{2}',a.app_version):p.error('APP_VER must have NN.NN format')
  if a.package and (a.title_id is None or not re.fullmatch('[A-Z0-9]{9}',a.title_id)):p.error('owner-selected nine-character uppercase alphanumeric TITLE_ID required')
- if a.experiment in ['E020','E021','E022','E023','E024','E025','E026','E027','E028','E029','E030','E031','E032'] and a.package and a.title_id!='HOWAW1178':p.error('retain owner-selected HOWAW1178')
+ if a.experiment in ['E020','E021','E022','E023','E024','E025','E026','E027','E028','E029','E030','E031','E032','E034'] and a.package and a.title_id!='HOWAW1178':p.error('retain owner-selected HOWAW1178')
  if a.experiment=='E021' and a.package and a.app_version!='00.22':p.error('E021 private diagnostic requires 00.22')
  if a.experiment=='E022' and a.package and a.app_version!='00.23':p.error('E022 private diagnostic requires 00.23')
  if a.experiment=='E023' and a.package and a.app_version!='00.24':p.error('E023 private diagnostic requires 00.24')
@@ -32,6 +32,7 @@ def main():
  if a.experiment=='E030' and a.package and a.app_version!='00.31':p.error('E030 private diagnostic requires 00.31')
  if a.experiment=='E031' and a.package and a.app_version!='00.32':p.error('E031 private diagnostic requires 00.32')
  if a.experiment=='E032' and a.package and a.app_version!='00.33':p.error('E032 private diagnostic requires 00.33')
+ if a.experiment=='E034' and a.package and a.app_version!='00.34':p.error('E034 private diagnostic requires 00.34')
  def sdk(tool,*args):subprocess.run(['wsl','-d',a.wsl_distro,'--exec',a.sdk+'/bin/'+tool,*map(str,args)],check=True)
  if a.prepare:
   if a.title_id:p.error('preparation does not assign an ID; use --package only after owner selection')
@@ -54,6 +55,7 @@ def main():
   if a.experiment=='E030' and (b'[graphics-per-vertex]' not in data or b'VISUAL_PROBE_COMPLETED' in data):p.error('E030 real per-vertex GXM path required')
   if a.experiment=='E031' and (any(m not in data for m in [b'[graphics-line]',b'[graphics-timing]',b'[graphics-per-vertex]']) or b'VISUAL_PROBE_COMPLETED' in data):p.error('E031 genuine line/color and timing paths required')
   if a.experiment=='E032' and (any(m not in data for m in [b'[perf-stage]',b'[perf-policy]',b'[diagnostic-policy]',b'DIAGNOSTIC_WATCHDOG']) or b'VISUAL_PROBE_COMPLETED' in data):p.error('E032 genuine phase profiling and explicit frame watchdog required')
+  if a.experiment=='E034' and (any(m not in data for m in [b'[collision-calibration]',b'[collision-method]',b'[collision-policy]']) or b'VISUAL_PROBE_COMPLETED' in data):p.error('E034 genuine collision profiling/calibration required')
   out.mkdir(parents=True);sdk('vita-make-fself','-s',translate(str(velf)),translate(str(out/'eboot.bin')))
   manifest={'utc_prepared':datetime.now(timezone.utc).isoformat(),'experiment':'E019','title_id':None,'device_execution':'UNTESTED','purpose':'load/verify original EXE, compile real scripts/events, execute startup until actual unavailable dialog','files':{'eboot.bin':{'sha256':sha(out/'eboot.bin'),'bytes':(out/'eboot.bin').stat().st_size}},'elf_sha256':sha(elf),'velf_sha256':sha(velf),'original_exe_sha256':'cf0661731e049371f30d2e953dcbad7236eb83c93f0b615fa819dbe913d8773f','data_path':'ux0:data/howaw/HOWaW_FirefightDemov1.exe','logs':'ux0:data/howaw/diagnostics/e019-NNN/run.log','no_original_files_embedded':True,'vpk':None}
   if b'OWNER_POLICY_HIGH' in data:
@@ -84,6 +86,8 @@ def main():
    manifest.update(experiment='E031',purpose='original line/width/gradient family and circles, separated GPU completion/display queue timings; same original VM/atlas/audio/input',logs='ux0:data/howaw/diagnostics/e031-NNN/run.log',profile='ux0:data/howaw/e021-profile')
   if a.experiment=='E032':
    manifest.update(experiment='E032',purpose='original sustained frame execution with explicit per-frame instruction guard, exclusive subsystem windows and one-binary baseline/optimized renderer comparison; no game changes',logs='ux0:data/howaw/diagnostics/e032-NNN/run.log',profile='ux0:data/howaw/e021-profile',baseline_flag='ux0:data/howaw/e032-baseline.flag',default_mode='optimized')
+  if a.experiment=='E034':
+   manifest.update(experiment='E034',purpose='original Firefight collision specialization and seven-method sampled timings/rejection rates with native calibration; same E032 renderer/audio/input and original30Hz',logs='ux0:data/howaw/diagnostics/e034-NNN/run.log',profile='ux0:data/howaw/e021-profile',collision_reference_flag='ux0:data/howaw/e034-collision-reference.flag',default_mode='optimized collisions')
   (out/'manifest.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
   print('Prepared real VM SELF + manifest; no TITLE_ID, SFO or VPK generated.');return
  manifest=json.loads((out/'manifest.json').read_text(encoding='utf-8'))

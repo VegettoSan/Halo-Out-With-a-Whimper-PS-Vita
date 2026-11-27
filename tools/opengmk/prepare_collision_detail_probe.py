@@ -59,7 +59,11 @@ def extend(root):
     p=root/'gm8emulator/Cargo.toml';p.write_text(p.read_text(encoding='utf-8')+'\n[[bin]]\nname="collision-detail-contract"\npath="src/bin/collision_detail_contract.rs"\nrequired-features=["vita2d","howaw_collision_contract"]\n',encoding='utf-8')
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--udon-source',type=Path,required=True);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--udon-source',type=Path,required=True);p.add_argument('--device-identity',action='store_true',help='fresh E034 diagnostic log identity, same collision implementation');a=p.parse_args()
     subprocess.run(['python',str(Path(__file__).with_name('prepare_collision_probe.py')),'--source',str(a.source),'--output',str(a.output),'--udon-source',str(a.udon_source)],check=True)
-    extend(a.output);print('Collision method samples/rejection counts/calibration + exact unit pixel specialization; hardware behavior UNTESTED')
+    extend(a.output)
+    if a.device_identity:
+        path=a.output/'gm8emulator/src/diagnostics.rs';s=path.read_text(encoding='utf-8');assert 'E032_DIAGNOSTIC_STARTED' in s and 'e032-{n:03}' in s
+        path.write_text(s.replace('E032_DIAGNOSTIC_STARTED','E034_DIAGNOSTIC_STARTED').replace('e032-{n:03}','e034-{n:03}'),encoding='utf-8')
+    print('Collision method samples/rejection counts/calibration + exact unit pixel specialization; hardware behavior UNTESTED')
 if __name__=='__main__':main()
