@@ -65,3 +65,33 @@ Conservative renderer clip rejection applies to every original sprite/tile/glyph
 Nine geometry tests, input/audio loop/stop/log contracts, real debug sink and reuse22/22 PASS; C-Werror/host1m16s/ARM1m42s/VELF PASS. Existing offline Rust/Cargo1.100.0/MSVC14.50.35717/GCC15.2.0, no downloads. Source/wrappers local-tools/frame-20261126, evidence reports/local/frame-20261126, preserved build/frame29-*. New recovery zero. Latest private HOWAW1178/00.30 e029-abe1b462.vpk transferred/hash-verified; physical room6/16 and performance/culling/pool-peak checks pending. Original simulation30Hz retained.
 
 Next exact test: retrieve e029 logs + installed SELF after both previous levels. Verify real GML debug output, original level Step/Draw/input, cull count, pool peak/failure bytes, atlas pools and cleanup. If a new service stops the VM, identify its general contract; do not bypass it or add map-specific exceptions. The diagnostic remains bounded2,700 original frames; native-session-end/exit0 is expected timed completion, distinct from an error. No stable playable Firefight or displayed60FPS claim yet.
+
+### E029 physical follow-up — retrieved 2026-11-27 UTC
+
+**VERIFIED PASS:** both original rooms6/16 render and advance their countdowns, confirmed by owner and real Step/Draw logs. Debug output executes genuinely; pool exhaustion no longer occurs. At completed1080, cumulative offscreen rejections94,939/94,379; observed pool peaks50,432/52,352B of1MiB, failed requests0. Atlas residency remains64MiB CDRAM+16MiB main; native free user93MiB/CDRAM26MiB. Live heap25,205,980/25,150,852B; peak108,121,376B. Both native pools restore on exit, audio error/drain/release0. **BLOCKED:** both stop at Graphics/per_vertex_tint after countdown, instructions100,779/107,000, exit1. Installed SELF18e3261aef43e348893ac64f0d5f9fb03ddf918c117abecc66516b01fd59481e; logs33ef4fa393c99e92583b4349f1761c08ceed128a3d519df28991b0e0aa46c75c /1a572716f9e78dfe5f0f3be38e3191ab6e66ba6ae65f3b5b7e4529d5dd9f6922 verified, private device-validation.json retained.
+
+**Performance FAIL for30Hz budget:** last60-frame room windows p50~50.04ms/p95~50.08–50.12ms, all60 above33.333ms. These include CPU/input/GPU waits and exclude the limiter; no displayed-FPS or pure GPU-cost claim. Cull/pool fixes remove the allocation blocker but do not prove sufficient performance. Next separate VM CPU, GPU completion and display/vblank costs after basic play progresses.
+
+## E030 — native textured vertex colors; shaders reused without SDL renderer
+
+**2026-11-27 UTC (owner-local November26): PC/ARM PASS, physical shader validation pending.** Source checkpointed as ed4eb8c. Reuse existing installed SDL2 GXM vertex/fragment programs, under its zlib notice: extract only read-only shader data from the cached archive; register two programs in the existing libvita2d shader patcher. No SDL renderer/runtime, vitaGL, shader compiler, mandatory plugin or downloaded binary. Installed SDL archive SHA0e645931ccede88ff56b6c46bd2c3ec85200eb8e2965a96904fcf5adea177410; extracted object has no unresolved symbols/code. Binary material remains ignored. [SDL native program interface](https://github.com/libsdl-org/SDL/blob/SDL2/src/render/vitagxm/SDL_render_vita_gxm_tools.c); local notice tools/opengmk/graphics/SDL_SHADER_NOTICE.txt.
+
+Authored direct-GXM adapter supplies position/UV/float RGBA, original normal/additive blend factors and checked program registration/uniform/stream/texture/draw calls. Owned patches unregister/release after GPU completion. Constant-color sprites retain the existing batched fast path; gradient sprites flush in original order, reuse the same atlas and allocate no replacement textures. Bounded CPU clipping preserves BOTH original triangle color planes while splitting source-edge clamp regions, including reversed crops; no four-corner UV/color approximation. Maximum270 vertices per colored call; native errors still stop honestly.
+
+Ten geometry tests PASS, including independent triangle-centroid color/UV checks, crop reversal and all prior tests; real debug/input/audio contracts, VM reuse22/22 and unchanged Game::frame/GML inventory PASS. Host1m10s/ARM1m29s/C-Werror/VELF PASS. Source/wrappers local-tools/tint-20261126; evidence reports/local/tint-20261126, preserved build/tint30-*. No new recovered assets. Private HOWAW1178/00.31 e030-606902c9.vpk transferred and hash-verified; VPK606902c9252ce26764808694525cae5aa9af71cb4d355a3966383fdde6eb582f, SELF71d8f973089cd61e7dbf3f191993e3bcf17129ba7bfbb0e6feb403c7dbffec7b. Next physical test: pass countdown, verify graphics-per-vertex success, actual player movement/shooting and next general service; hardware pixel fidelity and sustained play remain UNTESTED.
+
+### Remaining graphics audit — reuse existing inventory; no repeated recovery
+
+Baseline GML inventory hash unchanged; compare cached static call inventory with generated E030 RendererTrait and kernel boundaries. Private remaining-graphics.json records the actual gates; static presence is not execution coverage.
+
+| Remaining requirement | Evidence and next implementation | Additional shader? |
+| --- | --- | --- |
+| Lines / width / width-color |11/1/2 static sites; kernel gates + RendererTrait draw_line missing. Reuse checked native color lines/triangles with original width/gradient semantics | No |
+| Colored circles |5 sites; kernel gate + draw_ellipse/circle precision missing. Reuse original tessellation/precision and native colored triangles | No |
+| Pixel reads / screenshot |5/1 sites; get_pixels/flush_queue unavailable. Requires correct logical-coordinate readback, GPU synchronization and real image writing | No |
+| Background from screen |1 site; needs actual capture and dynamic atlas ownership/upload, bounded memory | Existing texture shader suffices |
+| Colored text |9 sites; kernel already reaches original glyph code. E030 supplies required textured corner-color path; native branch coverage pending | E030 path |
+| Other blend/interpolation/repeat states | Only normal/additive and point filtering verified; arbitrary factors/states still explicit stops | Evaluate actual factors/state before adding variants |
+| 3D/surfaces/custom primitives | No direct GML sites in cached lexical inventory; engine/indirect use cannot be ruled out | Do not invent shaders without evidence |
+
+Input display_mouse_set remains a separate explicit kernel boundary (one static site), not a shader issue. Continue general contracts instead of map-specific exceptions; unknown services never return fabricated success. All original resources/events/logic retained. No stable playable Firefight or60FPS claim yet.
