@@ -13,10 +13,12 @@ def analyze(path):
             r=numbers(line);r.update(context);r['kind']=re.search(r'kind=(\w+)',line)[1];r['stage']=re.search(r'stage=(\S+)',line)[1]
             r['early_rejection_rate']=r['early_reject']/r['calls'] if r['calls'] else None;r['stale_query_rate']=r['stale_queries']/r['calls'] if r['calls'] else None
             r['sampled_inclusive_mean_ns']=r['sampled_inclusive_ns']/r['samples'] if r['samples'] else None;rows.append(r)
+            r['sampled_domain']='fallback_only' if 'fallback_calls' in r else 'all_calls'
         if '[collision-calibration]' in line:
             r=numbers(line);n=r['iterations'];r['sampled_minus_empty_ns_per_call']=(r['sampled_ns']-r['empty_ns'])/n
             r['legacy_timed_minus_empty_ns_per_call']=(r['legacy_timed_ns']-r['empty_ns'])/n
             if 'combined_nested_ns' in r:r['added_detail_ns_per_nested_call']=(r['combined_nested_ns']-r['legacy_nested_ns'])/n
+            if 'fast_counter_ns' in r:r['fast_counter_minus_empty_ns_per_call']=(r['fast_counter_ns']-r['empty_ns'])/n
             calibration.append(r)
         if 'DETAIL_BENCH label=' in line:
             r=numbers(line);label=re.search(r'label=(\w+)',line)[1];r['reduction_percent']=100*(1-r['after_us']/r['before_us']);benches.setdefault(label,[]).append(r)
