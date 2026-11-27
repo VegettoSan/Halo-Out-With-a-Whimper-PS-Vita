@@ -1,6 +1,6 @@
 # Halo: Out With a Whimper — PS Vita (research port)
 
-> **Native menu, character selection and arena countdowns verified on Vita 1000.** Original rooms6/16 render and advance with real input/music through the unchanged VM/GML/resources. Their next common stop is textured per-vertex color. E030/00.31 implements that native GXM path using cached licensed shader programs; PC/ARM checks pass, physical validation pending. Sustained player control and60FPS remain unverified; level frame samples are~50ms. Private HOWAW1178 builds only. [Evidence, graphics gaps and next test](docs/OPENGMK_RUNTIME_PROGRESS.md).
+> **Native menu, character selection and arena countdowns verified on Vita 1000.** Original rooms6/16 render and advance with real input/music through the unchanged VM/GML/resources. E030 verifies textured vertex colors and initial post-countdown gameplay/movement; enemy-fire line-width is the next stop. E031/00.32 implements the general line/circle families and separated GPU/display timing, PC/ARM PASS and transferred privately; hardware combat test pending. Stable play and60FPS remain unverified; recent frame samples reach50–83ms. Private HOWAW1178 builds only. [Evidence, graphics gaps and next test](docs/OPENGMK_RUNTIME_PROGRESS.md).
 
 This repository documents research toward a native PlayStation Vita adaptation of the Windows *Halo: Out With a Whimper — Firefight Demo*. **Primary goal: reuse the original executable/data/game logic wherever technically possible, not recreate the game from scratch.**
 
