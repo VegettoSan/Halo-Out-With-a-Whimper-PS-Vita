@@ -7,7 +7,7 @@ def quant(values):
     return None if not n else {'n':n,'p50':values[n//2],'p95':values[max(0,(n*95+99)//100-1)],'peak':values[-1]}
 def numbers(line):return {k:int(v) for k,v in re.findall(r'([a-zA-Z0-9_]+)=(-?\d+)',line)}
 def analyze(path):
-    lines=path.read_text(encoding='utf-8').splitlines();samples=[];frame=None;stage='';windows={};mode='legacy';exit_code=None
+    lines=path.read_text(encoding='utf-8').splitlines();samples=[];frame=None;stage='';windows={};mode='legacy';exit_code=None;audio=[];memory=[];heap=[];end={}
     for line in lines:
         if '[perf-policy]' in line:mode=re.search(r'mode=(\w+)',line)[1]
         if '[original-frame]' in line:frame=numbers(line)
@@ -24,8 +24,15 @@ def analyze(path):
                     m=re.search(name+r'=(\[[^\]]*\])',line)
                     if m:w['load'][name]=json.loads(m[1])
             else:
+                w['render']=n
                 m=re.search(r'values=(\[\[.*\]\]) allocations=',line)
                 if m:w['render_p50_p95_peak']=json.loads(m[1])
+                m=re.search(r'allocations=(\[[^\]]*\])',line)
+                if m:w['allocations_p50_p95_peak']=json.loads(m[1])
+        if '[audio-window]' in line:audio.append(dict(numbers(line),checkpoint=frame['completed'] if frame else None))
+        if '[native-memory]' in line:memory.append(dict(numbers(line),stage=re.search(r'stage=(\w+)',line)[1]))
+        if '[heap]' in line:heap.append(dict(numbers(line),stage=re.search(r'stage=(\w+)',line)[1]))
+        if '[native-session-end]' in line:end=numbers(line)
         if 'DIAGNOSTIC_END exit_code=' in line:exit_code=numbers(line)['exit_code']
     joined='\n'.join(lines)
     if 'Builtin/instruction_budget' in joined:kind='diagnostic_total_instruction_limit'
@@ -43,7 +50,7 @@ def analyze(path):
         rows=[s for s in samples if s['room']==room and s['completed']>120]
         summaries[str(room)]={k:quant([s[k] for s in rows]) for k in ['cpu_gpu_wait_us','end_gpu_wait_us','swap_queue_wait_us']}
         summaries[str(room)]['main_thread_residual_us']=quant([s['cpu_gpu_wait_us']-s['end_gpu_wait_us']-s['swap_queue_wait_us'] for s in rows])
-    return {'log_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'mode':mode,'exit_code':exit_code,'termination':kind,'last_completed_checkpoint':max((s['completed'] for s in samples),default=None),'profile_invalid':sum('PROFILE_INVALID' in l for l in lines),'sparse_checkpoint_summary':summaries,'checkpoint_rows':samples,'exclusive_windows':windows,'methodology':'Sparse checkpoint quantiles are not full-window quantiles. Exclusive stage times are instrumented main-thread wall time, not CPU cycles. Native waits include driver work; no GPU-only or displayed-FPS claim. Audio-window quantiles are separate asynchronous 1ms-bin upper bounds.'}
+    return {'log_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'mode':mode,'exit_code':exit_code,'termination':kind,'last_completed_checkpoint':max((s['completed'] for s in samples),default=None),'session_end':end,'profile_invalid':sum('PROFILE_INVALID' in l for l in lines),'sparse_checkpoint_summary':summaries,'checkpoint_rows':samples,'exclusive_windows':windows,'audio_windows':audio,'native_memory':memory,'heap_snapshots':heap,'methodology':'Sparse checkpoint quantiles are not full-window quantiles. Exclusive stage times are instrumented main-thread wall time, not CPU cycles. Native waits include driver work; no GPU-only or displayed-FPS claim. Audio-window quantiles are separate asynchronous 1ms-bin upper bounds, checkpoint labels are context, not synchronous frame association.'}
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('log',type=Path);p.add_argument('--output',type=Path,required=True);p.add_argument('--installed-self',type=Path);p.add_argument('--sfo',type=Path);p.add_argument('--package',type=Path);p.add_argument('--version');a=p.parse_args();root=Path(__file__).resolve().parents[2]
     if not a.log.resolve().is_relative_to(root/'reports/local') or not a.output.resolve().is_relative_to(root/'reports/local') or a.output.exists():p.error('read ignored local report; write NEW ignored local report')
