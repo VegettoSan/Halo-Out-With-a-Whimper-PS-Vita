@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include <stdatomic.h>
 #include <stdlib.h>
+#include <psp2/kernel/processmgr.h>
+static unsigned int gpu_wait_us,display_wait_us,gpu_wait_peak,display_wait_peak;
+void howaw_present_times(unsigned int out[4]) {out[0]=gpu_wait_us;out[1]=display_wait_us;out[2]=gpu_wait_peak;out[3]=display_wait_peak;}
 
 /* Reuse the installed library's clear GXP, with an independently owned patch.
  * Color-mask NONE is essential: vita2d_clear_screen would overwrite color. */
@@ -267,10 +270,14 @@ int howaw_draw_lines(const vita2d_color_vertex *v,unsigned int n) {
     vita2d_draw_array(SCE_GXM_PRIMITIVE_LINES,gpu,n);pool_measure();return first_error;
 }
 int howaw_finish_frame(void) {
+    uint64_t start=sceKernelGetProcessTimeWide();
     vita2d_end_drawing();vita2d_wait_rendering_done();
+    gpu_wait_us=(unsigned int)(sceKernelGetProcessTimeWide()-start);if (gpu_wait_us>gpu_wait_peak) gpu_wait_peak=gpu_wait_us;
     if (first_error) return first_error;
+    start=sceKernelGetProcessTimeWide();
     vita2d_swap_buffers();
     checked(sceGxmDisplayQueueFinish(),9);
+    display_wait_us=(unsigned int)(sceKernelGetProcessTimeWide()-start);if(display_wait_us>display_wait_peak) display_wait_peak=display_wait_us;
     return first_error;
 }
 #include "vertex_tint.c"

@@ -19,13 +19,14 @@ pub struct Vita2d {
     vertices:Vec<Vertex>, key:Option<(usize,u32)>, in_scene:bool,
     draws:u64, sprites:u64, uploads:u64, frames:u64, released:usize,culled:u64,
     view_scale:f64, view_y_scale:f64, view_offset:[f64;2], colors:Vec<geometry::ColorVertex>, add:bool, rectangles:u64, logical:[u32;2],
+    circle_precision:i32,
 }
 impl Vita2d {
     pub fn from_atlases(atl:atlas::AtlasBuilder)->Self {
         let (packers,textures)=atl.into_inner();
         let pages=packers.iter().map(|p|{let (w,h)=p.size();Page{w,h,texture:std::ptr::null_mut(),mapped:0,main_ram:false}}).collect();
         let this=Self {entries:textures.into_iter().map(|(rect,pixels)|Entry{rect,pixels:Some(pixels)}).collect(),pages,
-            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,culled:0,view_scale:1.,view_y_scale:1.,view_offset:[0.,0.],colors:Vec::with_capacity(1536),add:false,rectangles:0,logical:[960,544]};
+            device:None,vertices:Vec::with_capacity(1536),key:None,in_scene:false,draws:0,sprites:0,uploads:0,frames:0,released:0,culled:0,view_scale:1.,view_y_scale:1.,view_offset:[0.,0.],colors:Vec::with_capacity(1536),add:false,rectangles:0,logical:[960,544],circle_precision:24};
         this.metrics("prepared");this
     }
     pub fn metrics(&self,stage:&str) {
@@ -94,6 +95,12 @@ impl Vita2d {
         for v in v.iter_mut() {v.x=(v.x as f64*self.view_scale+self.view_offset[0]) as f32;v.y=(v.y as f64*self.view_y_scale+self.view_offset[1]) as f32;}
         self.vertices.extend_from_slice(v);
     }
+    fn shape(&mut self,mut v:Vec<geometry::ColorVertex>,lines:bool) {
+        if v.is_empty(){return;}if !self.in_scene {panic!("GRAPHICS_FAIL shape outside scene");}
+        if !self.vertices.is_empty() || lines || self.colors.len()+v.len()>1536 {Self::checked(self.flush());}
+        for p in &mut v {p.x=(f64::from(p.x)*self.view_scale+self.view_offset[0]) as f32;p.y=(f64::from(p.y)*self.view_y_scale+self.view_offset[1]) as f32;}
+        if lines {Self::checked(self.device.as_ref().unwrap().lines(&v));self.draws+=1;}else{self.colors.extend_from_slice(&v);}
+    }
 }
 impl Drop for Vita2d {
     fn drop(&mut self) {
@@ -125,6 +132,17 @@ impl RendererTrait for Vita2d {
         self.add=add;crate::diagnostic!("[graphics-blend] src={:?} dst={:?}",src,dst);
     }
     fn draw_rectangle(&mut self,x1:f64,y1:f64,x2:f64,y2:f64,colour:i32,alpha:f64) {self.draw_rectangle_gradient(x1,y1,x2,y2,colour,colour,colour,colour,alpha,false);}
+    fn draw_line(&mut self,x1:f64,y1:f64,x2:f64,y2:f64,width:Option<f64>,c1:i32,c2:i32,alpha:f64) {
+        if ![x1,y1,x2,y2,alpha,width.unwrap_or(1.)].iter().all(|x|x.is_finite()) {panic!("GRAPHICS_FAIL nonfinite line");}
+        self.shape(geometry::line(x1,y1,x2,y2,width,c1,c2,alpha),width.is_none());
+        {static ONCE:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);if !ONCE.swap(true,std::sync::atomic::Ordering::Relaxed){crate::diagnostic!("[graphics-line] original_width_geometry=true native_color_shader=true");}}
+    }
+    fn set_circle_precision(&mut self,prec:i32){self.circle_precision=(prec.clamp(4,64)>>2)<<2;}
+    fn get_circle_precision(&self)->i32{self.circle_precision}
+    fn draw_ellipse(&mut self,x:f64,y:f64,rx:f64,ry:f64,c1:i32,c2:i32,alpha:f64,outline:bool) {
+        if ![x,y,rx,ry,alpha].iter().all(|x|x.is_finite()){panic!("GRAPHICS_FAIL nonfinite ellipse");}
+        self.shape(geometry::ellipse(x,y,rx,ry,c1,c2,alpha,outline,self.circle_precision),outline);
+    }
     fn draw_rectangle_outline(&mut self,x1:f64,y1:f64,x2:f64,y2:f64,colour:i32,alpha:f64) {self.draw_rectangle_gradient(x1,y1,x2,y2,colour,colour,colour,colour,alpha,true);}
     fn draw_rectangle_gradient(&mut self,x1:f64,y1:f64,x2:f64,y2:f64,c1:i32,c2:i32,c3:i32,c4:i32,alpha:f64,outline:bool) {
         if ![x1,y1,x2,y2,alpha].iter().all(|v|v.is_finite()) {panic!("GRAPHICS_FAIL nonfinite rectangle");}

@@ -5,6 +5,19 @@ pub struct Vertex { pub x:f32, pub y:f32, pub z:f32, pub u:f32, pub v:f32 }
 #[repr(C)]
 #[derive(Clone,Copy,Debug,Default)]
 pub struct ColorVertex {pub x:f32,pub y:f32,pub z:f32,pub color:u32}
+pub fn line(x1:f64,y1:f64,x2:f64,y2:f64,width:Option<f64>,c1:i32,c2:i32,alpha:f64)->Vec<ColorVertex> {
+    let point=|x:f64,y:f64,c|ColorVertex{x:x as f32,y:y as f32,z:0.5,color:tint(c,alpha)};
+    if let Some(w)=width {let len=(x2-x1).hypot(y2-y1);if len==0. {return vec![];}
+        let dx=(y2-y1)*w/2./len;let dy=(x2-x1)*w/2./len;
+        let v=[point(x1-dx,y1+dy,c1),point(x1+dx,y1-dy,c1),point(x2+dx,y2-dy,c2),point(x2-dx,y2+dy,c2)];
+        vec![v[0],v[1],v[2],v[0],v[2],v[3]]
+    } else {vec![point(x1,y1,c1),point(x2,y2,c2)]}
+}
+pub fn ellipse(x:f64,y:f64,rx:f64,ry:f64,c1:i32,c2:i32,alpha:f64,outline:bool,precision:i32)->Vec<ColorVertex> {
+    let edge=|i:i32|{let a=f64::from(i)*std::f64::consts::TAU/f64::from(precision);ColorVertex{x:(x+rx*a.cos()) as f32,y:(y+ry*a.sin()) as f32,z:0.5,color:tint(c2,alpha)}};
+    let center=ColorVertex{x:x as f32,y:y as f32,z:0.5,color:tint(c1,alpha)};let mut out=Vec::with_capacity(precision as usize*3);
+    for i in 0..precision {if !outline {out.push(center);}out.extend([edge(i),edge(i+1)]);}out
+}
 
 pub fn rectangle(x1:f64,y1:f64,x2:f64,y2:f64,colors:[i32;4],alpha:f64)->[ColorVertex;6] {
     let (left,right)=(x1.min(x2),x1.max(x2));let (top,bottom)=(y1.min(y2),y1.max(y2));
@@ -88,6 +101,12 @@ pub fn copy_bgra(src:&[u8], dst:&mut [u8], width:usize, height:usize, stride:usi
 
 #[cfg(test)] mod tests {
     use super::*;
+    #[test] fn line_width_colors_degenerate_and_ellipse_topology() {
+        let v=line(10.,10.,30.,10.,Some(20.),1,2,0.5);assert_eq!(v.len(),6);assert_eq!((v[0].x,v[0].y,v[0].color),(10.,20.,0x7f000001));assert_eq!((v[2].x,v[2].y,v[2].color),(30.,0.,0x7f000002));
+        assert!(line(0.,0.,0.,0.,Some(10.),0,0,1.).is_empty());assert_eq!(line(0.,0.,1.,1.,None,0,1,1.).len(),2);
+        let fill=ellipse(10.,20.,3.,4.,1,2,1.,false,24);assert_eq!(fill.len(),72);assert_eq!((fill[0].x,fill[0].y,fill[0].color),(10.,20.,0xff000001));
+        let edge=ellipse(10.,20.,3.,4.,1,2,1.,true,24);assert_eq!(edge.len(),48);assert!((edge[0].x-edge[47].x).abs()<1e-5 && (edge[0].y-edge[47].y).abs()<1e-5);
+    }
     #[test] fn clip_rejection_keeps_crossing_rotated_and_camera_visible_quads() {
         let q=|x,y,w,h,angle|quad([0.,0.],[0.,0.,w,h],[x,y],[1.,1.],angle,[0.,0.,2048.,2048.]);
         assert!(outside_view(&q(-100.,100.,10.,10.,0.),[1.,1.],[0.,0.]));

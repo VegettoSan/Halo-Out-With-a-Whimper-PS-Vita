@@ -17,6 +17,7 @@ mod ffi {
         pub fn howaw_gxm_error_api()->i32;
         pub fn howaw_gxm_draw_calls()->u32;
         pub fn howaw_pool_peak()->u32;
+        pub fn howaw_present_times(out:*mut u32);
         pub fn howaw_pool_failed_request()->u32;
         pub fn howaw_pool_failed_free()->u32;
         pub fn howaw_texture_create(w:u32,h:u32,main_ram:i32,stride:*mut u32,mapped:*mut u32)->*mut c_void;
@@ -44,6 +45,7 @@ impl Device {
         #[cfg(not(target_os="vita"))] {let _=(p,v,add);Err(unavailable())}
     }
     pub fn pool_metrics(&self) {
+        #[cfg(target_os="vita")] unsafe {let mut t=[0u32;4];ffi::howaw_present_times(t.as_mut_ptr());crate::diagnostic!("[graphics-timing] end_gpu_wait_us={} swap_queue_wait_us={} end_gpu_wait_peak_us={} swap_queue_wait_peak_us={}; CPU submission remains in original-frame residual",t[0],t[1],t[2],t[3]);}
         #[cfg(target_os="vita")] unsafe {crate::diagnostic!("[graphics-pool] capacity_bytes=1048576 peak_used_bytes={} failed_request_bytes={} failed_free_bytes={}",ffi::howaw_pool_peak(),ffi::howaw_pool_failed_request(),ffi::howaw_pool_failed_free());}
     }
     pub fn new()->Result<Self,String> {
